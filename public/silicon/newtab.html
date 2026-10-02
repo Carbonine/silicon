@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="newtab">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Tab</title>
+    <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="ntp">
+  <div class="newtab">
+    <div class="wordmark rise">Silicon</div>
+    <form class="search-form rise" style="--d:.04s" autocomplete="off">
+      <span class="ms">search</span>
+      <input type="text" placeholder="Search or enter a URL" aria-label="Search or enter a URL" spellcheck="false" autofocus>
+    </form>
+    <div class="shortcuts"></div>
+  </div>
+  <dialog id="add-dialog">
+    <form method="dialog">
+      <h2>Add shortcut</h2>
+      <label>Name <input name="name" type="text" placeholder="Optional" autocomplete="off"></label>
+      <label>URL <input name="url" type="text" placeholder="example.com" autocomplete="off" spellcheck="false"></label>
+      <p class="error"></p>
+      <div class="actions"><button type="button" class="cancel">Cancel</button><button type="submit" class="primary">Save</button></div>
+    </form>
+  </dialog>
+  <script type="module">
+    // Navigation is handled by the browser shell (public/js/app.js).
+    const go = (url) => parent.silicon.navigate(window, url);
+    const { normalizeUrl } = parent.silicon;
+    const KEY = "bookmarks";
+    // The site's own icon, found and fetched by this server (see server/icons.js)
+    const favicon = (url) => `/api/site-icon?u=${encodeURIComponent(new URL(url).origin)}`;
+
+    const input = document.querySelector(".search-form input");
+    document.querySelector(".search-form").onsubmit = (e) => { e.preventDefault(); if (input.value.trim()) go(input.value); };
+
+    const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+    const save = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} };
+
+    const box = document.querySelector(".shortcuts");
+    function tile({ title, url, icon }, onRemove, i) {
+      const wrap = document.createElement("div");
+      wrap.className = "shortcut-wrap rise";
+      wrap.style.setProperty("--d", 0.08 + i * 0.03 + "s");
+      const b = document.createElement("button");
+      b.className = "shortcut";
+      b.innerHTML = `<span class="circle"></span><span class="label"></span>`;
+      b.lastChild.textContent = title;
+      const circle = b.firstChild;
+      if (icon) circle.innerHTML = `<span class="ms">${icon}</span>`;
+      else {
+        const img = new Image();
+        img.alt = ""; img.width = img.height = 28;
+        img.onerror = () => (circle.innerHTML = `<span class="ms">public</span>`);
+        img.src = favicon(url);
+        circle.append(img);
+      }
+      b.onclick = () => go(url);
+      wrap.append(b);
+      if (onRemove) {
+        const x = document.createElement("button");
+        x.className = "remove"; x.title = "Remove"; x.setAttribute("aria-label", "Remove " + title);
+        x.innerHTML = `<span class="ms">close</span>`;
+        x.onclick = onRemove;
+        wrap.append(x);
+      }
+      return wrap;
+    }
+
+    function render() {
+      box.replaceChildren();
+      let i = 0;
+      box.append(tile({ title: "Games", url: "silicon://games", icon: "sports_esports" }, null, i++));
+      const list = load();
+      list.forEach((bm, idx) => box.append(tile(bm, () => { list.splice(idx, 1); save(list); render(); }, i++)));
+      const add = document.createElement("div");
+      add.className = "shortcut-wrap rise";
+      add.style.setProperty("--d", 0.08 + i * 0.03 + "s");
+      add.innerHTML = `<button class="shortcut"><span class="circle add"><span class="ms">add</span></span><span class="label">Add shortcut</span></button>`;
+      add.firstChild.onclick = openDialog;
+      box.append(add);
+    }
+
+    const dlg = document.getElementById("add-dialog");
+    const nameIn = dlg.querySelector('[name="name"]'), urlIn = dlg.querySelector('[name="url"]'), err = dlg.querySelector(".error");
+    function openDialog() { nameIn.value = urlIn.value = ""; err.textContent = ""; dlg.showModal(); urlIn.focus(); }
+    dlg.querySelector(".cancel").onclick = () => dlg.close();
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.querySelector("form").onsubmit = (e) => {
+      e.preventDefault();
+      const url = normalizeUrl(urlIn.value);
+      if (!url || url.startsWith("silicon://")) { err.textContent = "Enter a valid website address."; return; }
+      const list = load();
+      list.push({ title: nameIn.value.trim() || new URL(url).hostname.replace(/^www\./, ""), url });
+      save(list);
+      dlg.close();
+      render();
+    };
+    render();
+  </script>
+</body>
+</html>

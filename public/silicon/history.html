@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="history">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>History</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="games-page">
+  <header class="g-header">
+    <h1>History</h1>
+    <label class="g-search"><span class="ms">search</span><input id="q" type="text" placeholder="Search history" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+    <div class="g-tools"><button class="s-btn" id="clear">Clear browsing data…</button></div>
+  </header>
+
+  <main class="h-main">
+    <div id="list"></div>
+    <button class="s-link" id="more" hidden>Show more</button>
+    <div class="g-empty" id="empty" hidden><span class="ms">history</span><p id="empty-msg"></p></div>
+  </main>
+
+  <dialog id="clear-dialog">
+    <form method="dialog">
+      <h2>Clear browsing history</h2>
+      <label class="h-radio"><input type="radio" name="range" value="hour"> Last hour</label>
+      <label class="h-radio"><input type="radio" name="range" value="day"> Last 24 hours</label>
+      <label class="h-radio"><input type="radio" name="range" value="all" checked> All time</label>
+      <p class="h-note">This only clears the list on this page. Cookies, site data and your settings are kept (Settings has a Clear data option for those).</p>
+      <div class="actions"><button type="button" class="cancel">Cancel</button><button type="submit" class="primary" id="clear-go">Clear history</button></div>
+    </form>
+  </dialog>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const KEY = "history", STEP = 150;
+    const load = () => { try { const l = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(l) ? l : []; } catch { return []; } };
+    const save = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch {} };
+    const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+    const dayLabel = (ts) => {
+      const d = new Date(ts), today = new Date(); today.setHours(0, 0, 0, 0);
+      const diff = Math.round((today - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+      if (diff === 0) return "Today";
+      if (diff === 1) return "Yesterday";
+      return d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+    };
+    const timeLabel = (ts) => new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+    let q = "", shown = STEP;
+    function open(item, e) {
+      if (e && (e.metaKey || e.ctrlKey || e.button === 1)) parent.silicon.openTab(item.u);
+      else parent.silicon.navigate(window, item.u);
+    }
+    function row(item) {
+      const el = document.createElement("div");
+      el.className = "h-row";
+      el.innerHTML = `<span class="h-time"></span><span class="h-ico"><span class="ms">public</span></span><button class="h-main-btn"><span class="h-title"></span><span class="h-host"></span></button><button class="h-x" title="Remove from history" aria-label="Remove from history"><span class="ms">close</span></button>`;
+      el.querySelector(".h-time").textContent = timeLabel(item.ts);
+      el.querySelector(".h-title").textContent = item.t || hostOf(item.u);
+      el.querySelector(".h-host").textContent = hostOf(item.u);
+      const b = el.querySelector(".h-main-btn");
+      b.title = item.u;
+      b.onclick = (e) => open(item, e);
+      b.onauxclick = (e) => e.button === 1 && open(item, e);
+      el.querySelector(".h-x").onclick = () => { save(load().filter((x) => !(x.u === item.u && x.ts === item.ts))); render(true); };
+      return el;
+    }
+    function render(keep) {
+      if (!keep) shown = STEP;
+      const all = load().slice().sort((a, b) => b.ts - a.ts); // newest first, whatever order they were saved or imported in
+      const items = q ? all.filter((x) => `${x.t} ${x.u}`.toLowerCase().includes(q)) : all;
+      const box = $("list"); box.replaceChildren();
+      let day = null, group;
+      for (const item of items.slice(0, shown)) {
+        const label = dayLabel(item.ts);
+        if (label !== day) {
+          day = label;
+          group = document.createElement("section"); group.className = "h-group";
+          const h = document.createElement("h2"); h.textContent = label;
+          const card = document.createElement("div"); card.className = "h-card";
+          group.append(h, card); box.append(group);
+        }
+        group.querySelector(".h-card").append(row(item));
+      }
+      $("more").hidden = items.length <= shown;
+      $("more").textContent = `Show more (${items.length - shown} left)`;
+      $("clear").disabled = !all.length;
+      $("empty").hidden = items.length > 0;
+      let on = true; try { on = parent.silicon.settings.get().saveHistory; } catch {}
+      $("empty-msg").textContent = q ? "Nothing in your history matches that." : on ? "No history yet. Pages you open will show up here." : "History is turned off, so nothing is being saved. You can turn it on in Settings.";
+    }
+    $("q").oninput = () => { q = $("q").value.trim().toLowerCase(); render(); };
+    $("more").onclick = () => { shown += STEP; render(true); };
+    addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== $("q") && !e.ctrlKey && !e.metaKey) { e.preventDefault(); $("q").focus(); } });
+    addEventListener("storage", () => render(true));
+
+    const dlg = $("clear-dialog");
+    $("clear").onclick = () => dlg.showModal();
+    dlg.querySelector(".cancel").onclick = () => dlg.close();
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.querySelector("form").onsubmit = () => {
+      const range = dlg.querySelector('input[name="range"]:checked').value;
+      const since = range === "hour" ? Date.now() - 36e5 : range === "day" ? Date.now() - 864e5 : Infinity;
+      save(range === "all" ? [] : load().filter((x) => x.ts < since));
+      render();
+    };
+    render();
+  </script>
+</body>
+</html>

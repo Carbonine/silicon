@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="games">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Games</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="games-page">
+  <header class="g-header">
+    <h1>Games</h1>
+    <label class="g-search"><span class="ms">search</span><input id="q" type="text" placeholder="Search games" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+    <div class="g-tools">
+      <select id="source" aria-label="Source"></select>
+      <select id="sort" aria-label="Sort"><option value="az">A–Z</option><option value="za">Z–A</option><option value="recent">Recently played</option></select>
+    </div>
+  </header>
+
+  <nav class="g-chips" id="chips" aria-label="Categories"></nav>
+
+
+  <main class="g-main">
+    <section class="g-block" id="blk-recent" hidden>
+      <div class="g-head"><h2>Continue playing</h2><button class="s-link" id="clear-recent">Clear</button></div>
+      <div class="g-row" id="row-recent"></div>
+    </section>
+    <section class="g-block" id="blk-fav" hidden>
+      <div class="g-head"><h2>Favorites</h2></div>
+      <div class="g-row" id="row-fav"></div>
+    </section>
+    <section class="g-block" id="blk-new" hidden>
+      <div class="g-head"><h2>New</h2><span class="g-count">added recently</span></div>
+      <div class="g-row" id="row-new"></div>
+    </section>
+    <section class="g-block" id="blk-top" hidden>
+      <div class="g-head"><h2>Popular</h2></div>
+      <div class="g-row" id="row-top"></div>
+    </section>
+    <section class="g-block">
+      <div class="g-head"><h2 id="all-title">All games</h2><span class="g-count" id="count"></span></div>
+      <div class="g-grid" id="grid"></div>
+      <div id="sentinel" class="g-sentinel"></div>
+      <div class="g-empty" id="empty" hidden><span class="ms" id="empty-ico">sports_esports</span><p id="empty-msg">No games match your search.</p><div class="g-hint" id="empty-hint"></div></div>
+    </section>
+  </main>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const RECENT_KEY = "games:recent", FAV_KEY = "games:favs", PAGE = 60;
+    const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+    const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+    // ---- load the catalog from the server (which fetches and caches each source)
+    $("empty").hidden = false; $("empty-ico").textContent = "hourglass_top"; $("empty-msg").textContent = "Loading games…";
+    let data = { sources: {}, games: [] }, failed = false;
+    try { const r = await fetch("/api/games"); if (!r.ok) throw 0; data = await r.json(); } catch { failed = true; }
+    const games = data.games || [], sources = data.sources || {};
+    // Right after the server starts, slow sources may still be on their first fetch: look again in a few seconds.
+    if (Object.values(sources).some((s) => s.loading)) {
+      const tries = Number(sessionStorage.getItem("games:retries") || 0);
+      if (tries < 8) { sessionStorage.setItem("games:retries", tries + 1); setTimeout(() => location.reload(), 4000); }
+    } else sessionStorage.removeItem("games:retries");
+    const byId = new Map(games.map((g) => [g.id, g]));
+    const tagsOf = (g) => g.tags?.length ? g.tags : g.category ? [g.category] : [];
+    const catOf = (g) => g.category || tagsOf(g)[0] || "";
+    let favs = new Set(read(FAV_KEY, [])), recent = read(RECENT_KEY, []).filter((r) => byId.has(r.id));
+    const SOURCE_KEY = "games:source";
+    // One source at a time (no merged "All" view: the sources overlap a lot, so it was full of duplicates).
+    // Default is the biggest source; the last choice is remembered so coming back from a game keeps your place.
+    const available = Object.entries(sources).filter(([, s]) => s.count).sort((a, b) => b[1].count - a[1].count).map(([k]) => k);
+    const saved = read(SOURCE_KEY, null);
+    const state = { q: "", tag: "All", source: available.includes(saved) ? saved : available[0], sort: "az", shown: PAGE };
+    const nice = (t) => t.replace(/(^|[-\s])(\w)/g, (m, s, c) => (s === "-" ? " " : s) + c.toUpperCase()).replace(/^Rpg$/, "RPG").replace(/^Fps$/, "FPS").replace(/^Io$/, ".io");
+
+    // ---- filter controls: source select, and tag chips for the selected source (most common first)
+    for (const k of available) $("source").append(new Option(`${sources[k].label} (${sources[k].count})`, k));
+    if (state.source) $("source").value = state.source;
+    function buildChips() {
+      const counts = new Map();
+      for (const g of games) if (g.source === state.source) for (const t of tagsOf(g)) counts.set(t, (counts.get(t) || 0) + 1);
+      const chipTags = [...counts].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+      $("chips").hidden = chipTags.length < 2; // this source has no tags -> no chip row
+      $("chips").innerHTML = ["All", ...chipTags].map((t) => `<button class="chip${t === "All" ? " active" : ""}" data-c="${t}">${t === "All" ? "All" : nice(t)}</button>`).join("");
+    }
+    buildChips();
+    $("chips").onclick = (e) => { const b = e.target.closest(".chip"); if (!b) return; state.tag = b.dataset.c; document.querySelectorAll(".chip").forEach((x) => x.classList.toggle("active", x === b)); render(); };
+    $("q").oninput = () => { state.q = $("q").value.trim().toLowerCase(); render(); };
+    $("source").onchange = () => { state.source = $("source").value; write(SOURCE_KEY, state.source); state.tag = "All"; buildChips(); render(); };
+    $("sort").onchange = () => { state.sort = $("sort").value; render(); };
+    addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== $("q") && !e.ctrlKey && !e.metaKey) { e.preventDefault(); $("q").focus(); } });
+
+    // ---- cards
+    // Eight spread-out hues, picked from a hash of the title, for games without a thumbnail
+    const hue = (s) => ([...s].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261) % 8) * 45 + 210;
+    function card(g) {
+      const el = document.createElement("div");
+      el.className = "game";
+      el.innerHTML = `<button class="game-main">
+          <div class="thumb" style="--h:${hue(g.title || g.id)}"><span class="initial"></span><span class="warns"></span></div>
+          <div class="meta"><div class="name"></div><div class="sub"><span class="src"></span><span class="cat"></span></div></div>
+        </button>
+        <button class="fav${favs.has(g.id) ? " on" : ""}" aria-label="Favorite" title="Favorite"><span class="ms${favs.has(g.id) ? " fill" : ""}">star</span></button>`;
+      el.querySelector(".game-main").title = g.title;
+      el.querySelector(".initial").textContent = (g.title || "?")[0].toUpperCase();
+      if (g.thumb) { // on failure the colored initial underneath stays visible
+        const img = new Image(); img.alt = ""; img.loading = "lazy"; img.referrerPolicy = "no-referrer";
+        img.onerror = () => img.remove(); img.src = g.thumb;
+        el.querySelector(".thumb").prepend(img);
+      }
+      for (const w of g.warnings || []) { const s = document.createElement("span"); s.className = "warn " + (w === "wip" ? "wip" : ""); s.textContent = w === "wip" ? "WIP" : w === "gore" ? "Gore" : w; el.querySelector(".warns").append(s); }
+      el.querySelector(".name").textContent = g.title;
+      el.querySelector(".src").textContent = sources[g.source]?.label || g.source || "";
+      el.querySelector(".cat").textContent = catOf(g) ? nice(catOf(g)) : "";
+      el.querySelector(".game-main").onclick = (e) => play(g, e);
+      el.querySelector(".game-main").onauxclick = (e) => e.button === 1 && play(g, e);
+      el.querySelector(".fav").onclick = (e) => { e.stopPropagation(); toggleFav(g.id); };
+      return el;
+    }
+    // Games never go through the proxy: the player page (silicon://play) loads the game directly.
+    function play(g, e) {
+      const target = "silicon://play?game=" + encodeURIComponent(g.id);
+      if (e && (e.metaKey || e.ctrlKey || e.button === 1)) parent.silicon.openTab(target);
+      else parent.silicon.navigate(window, target);
+    }
+    function toggleFav(id) { favs.has(id) ? favs.delete(id) : favs.add(id); write(FAV_KEY, [...favs]); render(true); }
+
+    // ---- render (the main grid fills in pages as you scroll, so ~900 games stay fast)
+    function matches(g, source = state.source, tag = state.tag) {
+      if (g.source !== source) return false;
+      if (tag !== "All" && !tagsOf(g).includes(tag)) return false;
+      if (!state.q) return true;
+      return `${g.title} ${(g.alt || []).join(" ")} ${tagsOf(g).join(" ")} ${sources[g.source]?.label || g.source || ""}`.toLowerCase().includes(state.q);
+    }
+    let list = [];
+    function fill(el, items) { el.replaceChildren(...items.map(card)); }
+    function render(keepScroll) {
+      const filtering = state.q || state.tag !== "All";
+      list = games.filter((g) => matches(g));
+      const src = sources[state.source];
+      if (state.sort === "az") list.sort((a, b) => a.title.localeCompare(b.title));
+      else if (state.sort === "za") list.sort((a, b) => b.title.localeCompare(a.title));
+      else { const at = new Map(recent.map((r) => [r.id, r.t])); list.sort((a, b) => (at.get(b.id) || 0) - (at.get(a.id) || 0) || a.title.localeCompare(b.title)); }
+      if (!keepScroll) state.shown = PAGE;
+      // Continue playing and Favorites are yours, so they span every source; New and Popular belong to the selected one.
+      const rec = recent.map((r) => byId.get(r.id)).filter(Boolean), fav = games.filter((g) => favs.has(g.id)), top = games.filter((g) => g.top && g.source === state.source);
+      const fresh = games.filter((g) => g.source === state.source && g.added && Date.now() - g.added < 14 * 864e5).sort((a, b) => b.added - a.added).slice(0, 20); // added in the last two weeks
+      // "Continue playing", "Favorites", "New" and "Popular" only show when nothing is being searched or filtered
+      for (const [id, items, row] of [["blk-recent", rec, "row-recent"], ["blk-fav", fav, "row-fav"], ["blk-new", fresh, "row-new"], ["blk-top", top, "row-top"]]) {
+        $(id).hidden = filtering || !items.length;
+        if (!$(id).hidden) fill($(row), items);
+      }
+      fill($("grid"), list.slice(0, state.shown));
+      $("count").textContent = list.length ? `${list.length} game${list.length === 1 ? "" : "s"}` : "";
+      $("all-title").textContent = filtering ? "Results" : "All games";
+      $("empty").hidden = list.length > 0;
+      $("empty-ico").textContent = failed ? "cloud_off" : "sports_esports";
+      $("empty-msg").textContent = failed ? "Couldn't reach the game server. Try again in a moment."
+        : !games.length ? "No games available right now."
+        : state.q ? `Nothing in ${src?.label || "this source"} matches your search.` : "No games match.";
+      // With no merged view, point at the other sources that do have a match.
+      $("empty-hint").replaceChildren();
+      if (!list.length && state.q && !failed) {
+        for (const k of available) {
+          const n = k === state.source ? 0 : games.filter((g) => matches(g, k, "All")).length;
+          if (!n) continue;
+          const b = document.createElement("button"); b.className = "chip"; b.textContent = `Try ${sources[k].label} (${n})`;
+          b.onclick = () => { $("source").value = state.source = k; write(SOURCE_KEY, k); state.tag = "All"; buildChips(); render(); };
+          $("empty-hint").append(b);
+        }
+      }
+      const bad = Object.values(sources).filter((s) => s.error && !s.count);
+      if (bad.length && !failed && !filtering) { $("empty").hidden = false; $("empty-msg").textContent = `Couldn't load ${bad.map((s) => s.label).join(", ")} right now.`; if (list.length) $("empty").classList.add("note"); }
+    }
+    new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && state.shown < list.length) {
+        const next = list.slice(state.shown, state.shown + PAGE);
+        state.shown += PAGE;
+        $("grid").append(...next.map(card));
+      }
+    }, { rootMargin: "600px" }).observe($("sentinel"));
+    $("clear-recent").onclick = () => { recent = []; write(RECENT_KEY, recent); render(true); };
+    render();
+  </script>
+</body>
+</html>

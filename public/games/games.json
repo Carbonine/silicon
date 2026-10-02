@@ -1,0 +1,9 @@
+{
+  "_comment": "Games hosted by this server (source 'local', shown as 'Silicon' once it has any). Put files in public/games/<id>/ and list them here: { id, title, source: 'local', category?, thumb?, path: '/games/<id>/index.html' }. Other games come from the source adapters in server/games.js.",
+  "sources": {
+    "local": {
+      "label": "Silicon"
+    }
+  },
+  "games": []
+}

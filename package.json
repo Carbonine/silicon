@@ -1,0 +1,30 @@
+{
+  "name": "silicon",
+  "version": "0.1.0",
+  "description": "Silicon: a minimal pseudo-browser and games launcher powered by Scramjet",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "start:local": "NODE_ENV=production HOST=127.0.0.1 node server/index.js",
+    "build": "echo \"No build step: the frontend is static files in public/.\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@mercuryworkshop/epoxy-transport": "^3.0.1",
+    "@mercuryworkshop/libcurl-transport": "^2.0.5",
+    "@mercuryworkshop/scramjet": "^2.0.67-alpha.2",
+    "@mercuryworkshop/scramjet-controller": "^0.0.14",
+    "@mercuryworkshop/scramjet-utils": "^0.0.3",
+    "@mercuryworkshop/wisp-js": "^0.5.0",
+    "compression": "^1.8.2",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "material-symbols": "^0.47.5"
+  }
+}

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="bookmarks">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bookmarks</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="games-page">
+  <header class="g-header">
+    <h1>Bookmarks</h1>
+    <label class="g-search"><span class="ms">search</span><input id="q" type="text" placeholder="Search bookmarks" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+    <div class="g-tools"><button class="s-btn" id="add">Add bookmark</button></div>
+  </header>
+
+  <main class="h-main">
+    <p class="b-hint" id="hint">Drag to reorder. Bookmarks show in the bar under the address bar, in this order.</p>
+    <div class="h-card" id="list"></div>
+    <div class="g-empty" id="empty" hidden><span class="ms">bookmark</span><p id="empty-msg"></p></div>
+  </main>
+
+  <dialog id="bm-dialog">
+    <form method="dialog">
+      <h2 id="bm-title">Add bookmark</h2>
+      <label>Name <input name="name" type="text" placeholder="Optional" autocomplete="off"></label>
+      <label>URL <input name="url" type="text" placeholder="example.com" autocomplete="off" spellcheck="false"></label>
+      <p class="error"></p>
+      <div class="actions"><button type="button" class="cancel">Cancel</button><button type="submit" class="primary">Save</button></div>
+    </form>
+  </dialog>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const { normalizeUrl } = parent.silicon;
+    const KEY = "bookmarks:list"; // the bar under the address bar. (The new tab shortcuts are a separate list.)
+    const load = () => { try { const l = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(l) ? l : []; } catch { return []; } };
+    const save = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch {} };
+    const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+    const same = (a, b) => { try { return new URL(a).href === new URL(b).href; } catch { return a === b; } };
+
+    let q = "", dragFrom = -1;
+    function open(b, e) {
+      if (e && (e.metaKey || e.ctrlKey || e.button === 1)) parent.silicon.openTab(b.url);
+      else parent.silicon.navigate(window, b.url);
+    }
+    function move(from, to) {
+      const l = load();
+      if (from < 0 || from >= l.length) return;
+      to = Math.max(0, Math.min(l.length - 1, to));
+      if (to === from) return;
+      l.splice(to, 0, l.splice(from, 1)[0]);
+      save(l); render();
+    }
+    function row(b, i, total, canMove) {
+      const el = document.createElement("div");
+      el.className = "h-row b-row";
+      el.innerHTML = `<span class="b-grip" title="Drag to reorder"><span class="ms">drag_indicator</span></span><span class="h-ico"></span>
+        <button class="h-main-btn"><span class="h-title"></span><span class="h-host"></span></button>
+        <span class="b-acts"><button class="h-x up" title="Move up" aria-label="Move up"><span class="ms">arrow_upward</span></button><button class="h-x down" title="Move down" aria-label="Move down"><span class="ms">arrow_downward</span></button><button class="h-x edit" title="Edit" aria-label="Edit"><span class="ms">edit</span></button><button class="h-x del" title="Delete" aria-label="Delete"><span class="ms">delete</span></button></span>`;
+      const ico = el.querySelector(".h-ico");
+      if (b.icon) { const img = new Image(); img.alt = ""; img.src = b.icon; img.className = "b-img"; ico.append(img); } else ico.innerHTML = '<span class="ms">public</span>';
+      el.querySelector(".h-title").textContent = b.title || hostOf(b.url);
+      el.querySelector(".h-host").textContent = hostOf(b.url);
+      const main = el.querySelector(".h-main-btn");
+      main.title = b.url;
+      main.onclick = (e) => open(b, e);
+      main.onauxclick = (e) => e.button === 1 && open(b, e);
+      el.querySelector(".edit").onclick = () => openDialog(i);
+      el.querySelector(".del").onclick = () => { const l = load(); l.splice(i, 1); save(l); render(); };
+      el.classList.toggle("no-move", !canMove);
+      el.querySelector(".up").onclick = () => move(i, i - 1);
+      el.querySelector(".down").onclick = () => move(i, i + 1);
+      el.querySelector(".up").disabled = i === 0;
+      el.querySelector(".down").disabled = i === total - 1;
+      if (canMove) { // drag and drop: the row is only draggable while the handle is held
+        const grip = el.querySelector(".b-grip");
+        grip.onpointerdown = () => (el.draggable = true);
+        grip.onpointerup = () => (el.draggable = false);
+        el.ondragstart = (e) => { dragFrom = i; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(i)); el.classList.add("dragging"); };
+        el.ondragend = () => { dragFrom = -1; el.draggable = false; document.querySelectorAll(".drop-before,.drop-after,.dragging").forEach((x) => x.classList.remove("drop-before", "drop-after", "dragging")); };
+        el.ondragover = (e) => {
+          if (dragFrom < 0) return;
+          e.preventDefault();
+          const after = e.clientY > el.getBoundingClientRect().top + el.offsetHeight / 2;
+          document.querySelectorAll(".drop-before,.drop-after").forEach((x) => x.classList.remove("drop-before", "drop-after"));
+          el.classList.add(after ? "drop-after" : "drop-before");
+        };
+        el.ondrop = (e) => {
+          if (dragFrom < 0) return;
+          e.preventDefault();
+          const after = e.clientY > el.getBoundingClientRect().top + el.offsetHeight / 2;
+          let to = i + (after ? 1 : 0);
+          if (dragFrom < to) to--;
+          move(dragFrom, to);
+        };
+      }
+      return el;
+    }
+    function render() {
+      const all = load();
+      const items = all.map((b, i) => ({ b, i })).filter(({ b }) => !q || `${b.title} ${b.url}`.toLowerCase().includes(q));
+      $("list").replaceChildren(...items.map(({ b, i }) => row(b, i, all.length, !q)));
+      $("list").hidden = !items.length;
+      $("hint").hidden = !all.length || !!q;
+      $("empty").hidden = items.length > 0;
+      $("empty-msg").textContent = q ? "No bookmarks match your search." : "No bookmarks yet. Add one here, or use the star in the address bar. They\u2019ll show in a bar under the address bar.";
+    }
+    $("q").oninput = () => { q = $("q").value.trim().toLowerCase(); render(); };
+    addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== $("q") && !document.querySelector("dialog[open]") && !e.ctrlKey && !e.metaKey) { e.preventDefault(); $("q").focus(); } });
+    addEventListener("storage", () => render());
+
+    // Add / edit dialog
+    const dlg = $("bm-dialog");
+    const nameIn = dlg.querySelector('[name="name"]'), urlIn = dlg.querySelector('[name="url"]'), err = dlg.querySelector(".error");
+    let editing = -1;
+    function openDialog(i = -1) {
+      editing = i;
+      const b = i >= 0 ? load()[i] : null;
+      $("bm-title").textContent = b ? "Edit bookmark" : "Add bookmark";
+      nameIn.value = b?.title || ""; urlIn.value = b?.url || ""; err.textContent = "";
+      dlg.showModal(); (b ? nameIn : urlIn).focus();
+    }
+    $("add").onclick = () => openDialog();
+    dlg.querySelector(".cancel").onclick = () => dlg.close();
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.querySelector("form").onsubmit = (e) => {
+      e.preventDefault();
+      const url = normalizeUrl(urlIn.value);
+      if (!url || url.startsWith("silicon://")) { err.textContent = "Enter a valid website address."; return; }
+      const list = load();
+      if (list.some((x, i) => i !== editing && same(x.url, url))) { err.textContent = "That address is already in your bookmarks."; return; }
+      const entry = { title: nameIn.value.trim() || hostOf(url), url };
+      if (editing >= 0 && list[editing].icon && same(list[editing].url, url)) entry.icon = list[editing].icon; // keep its icon unless the address changed
+      if (editing >= 0) list[editing] = entry; else list.push(entry);
+      save(list); dlg.close(); render();
+    };
+    render();
+  </script>
+</body>
+</html>

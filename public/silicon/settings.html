@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="settings">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="settings">
+  <header class="s-header">
+    <h1>Settings</h1>
+    <label class="s-search"><span class="ms">search</span><input id="filter" type="text" placeholder="Search settings" autocomplete="off" spellcheck="false"></label>
+  </header>
+
+  <div class="s-body">
+    <nav class="s-nav">
+      <button data-s="appearance" class="active"><span class="ms">palette</span>Appearance</button>
+      <button data-s="search"><span class="ms">search</span>Search engine</button>
+      <button data-s="privacy"><span class="ms">lock</span>Privacy</button>
+      <button data-s="proxy"><span class="ms">vpn_lock</span>Proxy</button>
+      <button data-s="data"><span class="ms">database</span>Data</button>
+      <button data-s="about"><span class="ms">info</span>About Silicon</button>
+    </nav>
+
+    <main class="s-main">
+      <section class="s-section active" id="s-appearance">
+        <h2>Appearance</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Theme</div><div class="d">Choose how Silicon looks. System follows your device.</div></div>
+            <div class="s-ctl"><select id="theme"><option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option></select></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Show bookmarks bar</div><div class="d">A row of your bookmarks under the address bar. It only appears when you have bookmarks. Ctrl+Shift+B turns it on and off.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="bm-bar"><span></span></label></div></div>
+        </div>
+      </section>
+
+      <section class="s-section" id="s-search">
+        <h2>Search engine</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Search engine used in the address bar</div><div class="d">Used when what you type isn't a web address.</div></div>
+            <div class="s-ctl"><select id="engine"></select></div></div>
+          <div class="s-row" id="row-custom-search"><div class="s-label"><div class="t">Custom search address</div><div class="d">Write the address of your search engine and put <b>%s</b> where your search should go, for example <b>example.com/?q=%s</b>. Without %s it won't work.</div></div>
+            <div class="s-ctl"><input id="custom-search" type="text" placeholder="example.com/?q=%s" spellcheck="false" autocomplete="off"></div></div>
+        </div>
+      </section>
+
+      <section class="s-section" id="s-privacy">
+        <h2>Panic key</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Enable panic key</div><div class="d">Pressing the key immediately stops everything and sends this tab to the panic site. Works on every page, including sites you're browsing. Off by default.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="panic-on"><span></span></label></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Panic key</div><div class="d" id="panic-key-help">Click the button, then press the key or combination you want. Unbound by default. Esc cancels.</div></div>
+            <div class="s-ctl s-inline"><button class="s-btn" id="panic-key"></button><button class="s-link" id="panic-clear">Clear</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Panic site</div><div class="d">Where you're sent. Must be an http(s) address.</div></div>
+            <div class="s-ctl"><input id="panic-url" type="text" spellcheck="false" autocomplete="off" placeholder="https://www.google.com/"></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Open in about:blank</div><div class="d">Opens Silicon in a new about:blank window and sends this tab to the panic site. Allow pop-ups if your browser blocks it. Your open tabs don't carry over.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="cover-blank">Open</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Open in blob:</div><div class="d">Same as above, but the new window uses a blob: address.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="cover-blob">Open</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Auto cover</div><div class="d">The first time you press a key on the front page (new tab), it opens in about:blank and this tab goes to the panic site. Mouse clicks don't count, and typing in Settings doesn't trigger it. Off by default.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="auto-cover"><span></span></label></div></div>
+        </div>
+
+        <h2>Tab cloak</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Tab cloak</div><div class="d">When this window loses focus, the tab title and icon change to look like this site. Each icon is loaded from the site itself.</div></div>
+            <div class="s-ctl s-inline"><img id="cloak-preview" class="s-fav" alt="" width="20" height="20"><select id="cloak"></select></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Always show cloak</div><div class="d">Keep the cloak on even while you're using Silicon, not only when the window loses focus. Off by default.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="cloak-always"><span></span></label></div></div>
+          <div class="s-row" id="row-cloak-site"><div class="s-label"><div class="t">Icon address</div><div class="d">Required. The full web address of the icon image, for example https://example.com/favicon.ico. Silicon doesn't look icons up for you.</div></div>
+            <div class="s-ctl"><input id="cloak-site" type="url" placeholder="https://example.com/favicon.ico" spellcheck="false" autocomplete="off"></div></div>
+          <div class="s-row" id="row-cloak-title"><div class="s-label"><div class="t">Custom title</div><div class="d">Required. The tab title to show. The custom cloak only works once both the title and the icon address are set.</div></div>
+            <div class="s-ctl"><input id="cloak-title" type="text" placeholder="Optional" spellcheck="false" autocomplete="off"></div></div>
+        </div>
+
+        <h2>History</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Save browsing history</div><div class="d">Keep a list of the pages you open, shown on silicon://history. It stays in this browser. Turning this off doesn't delete what's already saved.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="save-history"><span></span></label></div></div>
+        </div>
+
+        <h2>Leaving</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Confirm before leaving</div><div class="d">Ask before this tab is closed or reloaded. The panic key ignores this. Off by default.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="confirm-leave"><span></span></label></div></div>
+        </div>
+      </section>
+
+      <section class="s-section" id="s-proxy">
+        <h2>Proxy</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Transport</div><div class="d">How proxied traffic leaves the Wisp server. Epoxy is the default; libcurl is an alternative that supports an upstream proxy.</div></div>
+            <div class="s-ctl"><select id="transport"><option value="epoxy">Epoxy (default)</option><option value="libcurl">libcurl</option></select></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Proxy games</div><div class="d">Load games from their own servers (like Selenite) through the proxy, which helps when those sites are blocked. Games hosted by Silicon are never proxied, and emulator games load directly for now because they don't run through the proxy. You can switch any game with the shield button in the player.</div></div>
+            <div class="s-ctl"><label class="switch"><input type="checkbox" id="proxy-games"><span></span></label></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Wisp server</div><div class="d">WebSocket address of the Wisp server. Leave empty to use the one built into this server.</div></div>
+            <div class="s-ctl"><input id="wisp" type="text" spellcheck="false" autocomplete="off"></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Upstream proxy</div><div class="d">Optional SOCKS5 or HTTP proxy for the transport, e.g. socks5h://localhost:9050 for Tor. Requires the libcurl transport.</div></div>
+            <div class="s-ctl"><input id="proxy" type="text" placeholder="None" spellcheck="false" autocomplete="off"></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Reset proxy settings</div><div class="d">Restore the transport, Wisp server and upstream proxy to their defaults.</div></div>
+            <div class="s-ctl"><button class="s-link" id="reset-proxy">Reset</button></div></div>
+        </div>
+      </section>
+
+      <section class="s-section" id="s-data">
+        <h2>Backup</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Export data</div><div class="d">Download everything Silicon has saved (settings, bookmarks, history, favorites, recently played, and games' local storage) as one JSON file. Saves that games keep in IndexedDB aren't in it; see Game saves below. It may include your panic key and site, so keep it private.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="export-data">Export</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Import data</div><div class="d">Restore from a backup file. This replaces your current settings and data. Only import files you exported yourself.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="import-data">Import…</button><input type="file" id="import-file" accept="application/json,.json" hidden></div></div>
+        </div>
+
+        <h2>Game saves</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Export game saves</div><div class="d">Download the saves games keep in this browser (their local storage and IndexedDB data) as a file. The backup above only covers local storage, so use this for games that keep saves in IndexedDB.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="export-saves">Choose…</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Import game saves</div><div class="d">Put saves from a file back into this browser. Saves with the same name are replaced; everything else is kept. Close any open game tabs first. Only import files you exported yourself.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="import-saves">Import…</button><input type="file" id="import-saves-file" accept="application/json,.json" hidden></div></div>
+        </div>
+
+        <h2 class="danger-h">Danger zone</h2>
+        <div class="s-card danger">
+          <div class="s-row"><div class="s-label"><div class="t">Clear data</div><div class="d">Deletes your shortcuts, browsing history, favorites, recently played, saved game data, and cached proxy data (cookies and site storage). Your settings are kept. This can't be undone.</div></div>
+            <div class="s-ctl"><button class="s-btn danger" id="clear-data">Clear data…</button></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Reset all settings</div><div class="d">Puts every setting back to its default (theme, search engine, privacy options, panic key, proxy). Your data is kept. This can't be undone.</div></div>
+            <div class="s-ctl"><button class="s-btn danger" id="reset-settings">Reset settings…</button></div></div>
+        </div>
+      </section>
+
+      <section class="s-section" id="s-about">
+        <h2>About Silicon</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Silicon</div><div class="d">A simple browser and games launcher.</div></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Version</div><div class="d" id="app-version">v0.1 · beta</div></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Proxy engine</div><div class="d" id="ver">Scramjet</div></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">License</div><div class="d">GNU Affero General Public License v3.0</div></div></div>
+        </div>
+
+        <h2>Credits</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">Carbonine</div><div class="d">Developers</div></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Mercury Workshop</div><div class="d">Proxy developers</div></div></div>
+        </div>
+      </section>
+      <div class="s-empty" id="empty">No settings found</div>
+    </main>
+  </div>
+  <dialog id="saves-dialog" class="wide">
+    <form method="dialog">
+      <h2 id="sv-title"></h2>
+      <p class="sv-intro" id="sv-intro"></p>
+      <div id="sv-list"></div>
+      <p class="error" id="sv-error"></p>
+      <div class="actions"><button type="button" id="sv-cancel">Cancel</button><button type="submit" class="primary" id="sv-go"></button></div>
+    </form>
+  </dialog>
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <h2 id="cd-title"></h2>
+      <p id="cd-text"></p>
+      <label id="cd-label">Type <b>I want to delete my data</b> to confirm<input id="cd-input" type="text" autocomplete="off" spellcheck="false"></label>
+      <p class="error" id="cd-error"></p>
+      <div class="actions"><button type="button" class="cancel" id="cd-cancel">Cancel</button><button type="submit" class="primary danger" id="cd-ok" disabled></button></div>
+    </form>
+  </dialog>
+  <div class="s-toast" id="toast"></div>
+
+  <script type="module">
+    import { scan, buildExport, parseFile, importSaves } from "/js/saves.js";
+    const S = parent.silicon.settings;
+    const $ = (id) => document.getElementById(id);
+    let toastTimer;
+    const toast = (msg) => { $("toast").textContent = msg; $("toast").classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("show"), 1600); };
+
+    // Sections
+    const show = (name) => {
+      document.querySelectorAll(".s-nav button").forEach((b) => b.classList.toggle("active", b.dataset.s === name));
+      document.querySelectorAll(".s-section").forEach((s) => s.classList.toggle("active", s.id === "s-" + name));
+    };
+    document.querySelectorAll(".s-nav button").forEach((b) => (b.onclick = () => { $("filter").value = ""; filter(); show(b.dataset.s); }));
+
+    // Values
+    for (const [k, e] of Object.entries(S.engines)) $("engine").append(new Option(e.label, k));
+    for (const [k, c] of Object.entries(S.cloaks)) $("cloak").append(new Option(c.label, k));
+    const fmtKey = (c) => c ? [c.ctrl && "Ctrl", c.alt && "Alt", c.shift && "Shift", c.meta && "Cmd", c.key.length === 1 ? c.key.toUpperCase() : c.key === " " ? "Space" : c.key].filter(Boolean).join(" + ") : "Not set";
+    $("wisp").placeholder = S.defaultWisp();
+    function fill() {
+      const v = S.get();
+      $("theme").value = v.theme; $("engine").value = v.searchEngine; $("custom-search").value = v.customSearch;
+      $("row-custom-search").style.display = v.searchEngine === "custom" ? "" : "none"; $("cloak").value = v.cloak;
+      $("transport").value = v.transport; $("wisp").value = v.wisp; $("proxy").value = v.proxy;
+      $("proxy").disabled = v.transport !== "libcurl";
+      $("proxy-games").checked = v.proxyGames; $("panic-on").checked = v.panicEnabled; $("panic-url").value = v.panicUrl; $("auto-cover").checked = v.autoCover; $("confirm-leave").checked = v.confirmLeave; $("save-history").checked = v.saveHistory; $("bm-bar").checked = v.showBookmarksBar;
+      if (!capturing) $("panic-key").textContent = fmtKey(v.panicKey);
+      for (const id of ["panic-key", "panic-clear", "panic-url"]) $(id).disabled = !v.panicEnabled;
+      $("cloak-always").checked = v.cloakAlways; $("cloak-site").value = v.cloakIcon; $("cloak-title").value = v.cloakTitle;
+      $("row-cloak-site").style.display = $("row-cloak-title").style.display = v.cloak === "custom" ? "" : "none";
+      $("cloak-preview").src = S.cloakIdentity(v.cloak).icon; $("cloak-preview").style.visibility = v.cloak === "silicon" ? "hidden" : "visible";
+    }
+    async function save(patch) { await S.set(patch).catch(() => toast("Couldn't apply the change")); fill(); toast("Saved"); }
+    $("theme").onchange = () => save({ theme: $("theme").value });
+    $("custom-search").onchange = () => {
+      const raw = $("custom-search").value.trim();
+      if (!raw) return save({ customSearch: "" });
+      const t = S.normalizeSearchTemplate(raw);
+      if (!t) { toast("Include %s where the search goes, e.g. example.com/?q=%s"); fill(); return; }
+      save({ customSearch: t });
+    };
+    $("engine").onchange = () => save({ searchEngine: $("engine").value });
+    $("cloak").onchange = () => save({ cloak: $("cloak").value });
+    $("transport").onchange = () => save({ transport: $("transport").value });
+    $("wisp").onchange = () => save({ wisp: $("wisp").value.trim() });
+    $("proxy").onchange = () => save({ proxy: $("proxy").value.trim() });
+    $("proxy-games").onchange = () => save({ proxyGames: $("proxy-games").checked });
+    $("panic-on").onchange = () => save({ panicEnabled: $("panic-on").checked });
+    $("auto-cover").onchange = () => save({ autoCover: $("auto-cover").checked });
+    $("confirm-leave").onchange = () => save({ confirmLeave: $("confirm-leave").checked });
+    $("bm-bar").onchange = () => save({ showBookmarksBar: $("bm-bar").checked });
+    $("save-history").onchange = () => save({ saveHistory: $("save-history").checked });
+    $("cloak-always").onchange = () => save({ cloakAlways: $("cloak-always").checked });
+    $("cloak-site").onchange = () => {
+      const raw = $("cloak-site").value.trim(), url = raw ? S.iconUrl(raw) : "";
+      if (raw && !url) { toast("Enter a full address starting with http:// or https://"); $("cloak-site").value = S.get().cloakIcon; return; }
+      save({ cloakIcon: url });
+    };
+    $("cloak-title").onchange = () => save({ cloakTitle: $("cloak-title").value.trim() });
+    $("panic-url").onchange = () => {
+      const raw = $("panic-url").value.trim();
+      const u = raw ? parent.silicon.normalizeUrl(raw) : "https://www.google.com/";
+      if (!u || !/^https?:/.test(u)) { toast("Enter a valid http(s) address"); fill(); return; }
+      save({ panicUrl: u });
+    };
+    $("panic-clear").onclick = () => save({ panicKey: null });
+    $("cover-blank").onclick = () => parent.silicon.openCover("about:blank");
+    $("cover-blob").onclick = () => parent.silicon.openCover("blob");
+
+    // Record a new panic key. While recording, the shell ignores key events so nothing fires by accident.
+    let capturing = false;
+    const stopCapture = () => { capturing = false; parent.silicon.setCapture(false); fill(); };
+    $("panic-key").onclick = () => { capturing = true; parent.silicon.setCapture(true); $("panic-key").textContent = "Press a key…"; $("panic-key").focus(); };
+    $("panic-key").onblur = () => capturing && stopCapture();
+    window.addEventListener("keydown", (e) => {
+      if (!capturing) return;
+      e.preventDefault(); e.stopImmediatePropagation(); // don't let the shell's panic listener see this press
+      if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return; // wait for the real key
+      if (e.key === "Escape") return stopCapture();
+      capturing = false;
+      setTimeout(() => parent.silicon.setCapture(false), 300); // keep the shell quiet until the key is released
+      save({ panicKey: { key: e.key, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey } });
+    }, true);
+    $("reset-proxy").onclick = () => save({ transport: "epoxy", wisp: "", proxy: "", proxyGames: true });
+    fill();
+    $("ver").textContent = "Scramjet " + (parent.$scramjet?.versionInfo?.version ?? "2");
+
+    // ---- Data: export, import, danger zone
+    const D = parent.silicon.data;
+    $("export-data").onclick = () => {
+      const blob = new Blob([JSON.stringify(D.export(), null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `silicon-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast("Backup downloaded");
+    };
+    const dlg = $("confirm-dialog"), PHRASE = "I want to delete my data";
+    // One dialog serves all three confirmations; "typed" ones need the exact phrase.
+    function confirmAction({ title, text, button, typed, run }) {
+      $("cd-title").textContent = title; $("cd-text").textContent = text; $("cd-ok").textContent = button;
+      $("cd-label").style.display = typed ? "" : "none"; $("cd-input").value = ""; $("cd-error").textContent = "";
+      $("cd-ok").disabled = !!typed;
+      $("cd-ok").classList.toggle("danger", !!typed);
+      dlg.dataset.typed = typed ? "1" : ""; dlg._run = run;
+      dlg.showModal(); if (typed) $("cd-input").focus();
+    }
+    $("cd-input").oninput = () => { $("cd-ok").disabled = $("cd-input").value !== PHRASE; };
+    $("cd-cancel").onclick = () => dlg.close();
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.querySelector("form").onsubmit = (e) => {
+      e.preventDefault();
+      if (dlg.dataset.typed && $("cd-input").value !== PHRASE) return; // Enter can't skip the phrase
+      const run = dlg._run; dlg.close(); run();
+    };
+    // ---- Game saves (see /js/saves.js)
+    const sv = $("saves-dialog");
+    let svMode = "", svSites = [];
+    function svShow(mode, sites, intro) {
+      svMode = mode; svSites = sites;
+      $("sv-title").textContent = mode === "export" ? "Export game saves" : "Import game saves";
+      $("sv-intro").textContent = intro; $("sv-error").textContent = "";
+      $("sv-go").textContent = mode === "export" ? "Export" : "Import"; $("sv-go").disabled = !sites.length;
+      const list = $("sv-list"); list.replaceChildren();
+      if (!sites.length) { const p = document.createElement("p"); p.className = "sv-empty"; p.textContent = mode === "export" ? "No saves found yet. Play a game through the proxy, then come back." : "That file doesn't have any saves in it."; list.append(p); }
+      for (const site of sites) {
+        const g = document.createElement("div"); g.className = "sv-site";
+        const h = document.createElement("div"); h.className = "sv-host"; h.textContent = site.host; g.append(h);
+        const row = (kind, key, label, on, note) => {
+          const l = document.createElement("label"); l.className = "sv-row";
+          const c = document.createElement("input"); c.type = "checkbox"; c.checked = on; c.dataset.kind = kind; c.dataset.key = key;
+          const t = document.createElement("span"); t.textContent = label;
+          l.append(c, t);
+          if (note) { const n = document.createElement("span"); n.className = "sv-note"; n.textContent = note; l.append(n); }
+          g.append(l);
+        };
+        if (site.localStorage.length) row("ls", site.host, `Local storage (${site.localStorage.length} item${site.localStorage.length === 1 ? "" : "s"})`, true);
+        for (const d of site.databases) { const cache = /cache/i.test(d.db); row("db", d.name, `Database "${d.db}" (${d.records} record${d.records === 1 ? "" : "s"})`, !cache, cache ? "Looks like a cache, so it's off by default" : ""); }
+        list.append(g);
+      }
+      sv.showModal();
+    }
+    // Which of the ticked boxes: { ls: Set of localStorage keys, db: Set of database names }
+    function svSelection() {
+      const sel = { ls: new Set(), db: new Set() };
+      for (const c of $("sv-list").querySelectorAll("input:checked")) {
+        if (c.dataset.kind === "db") sel.db.add(c.dataset.key);
+        else for (const site of svSites) if (site.host === c.dataset.key) site.localStorage.forEach((k) => sel.ls.add(k));
+      }
+      return sel;
+    }
+    $("sv-cancel").onclick = () => sv.close();
+    sv.addEventListener("click", (e) => { if (e.target === sv) sv.close(); });
+    $("export-saves").onclick = async () => {
+      $("export-saves").disabled = true;
+      try { svShow("export", await scan(), "Choose which saves to put in the file."); } catch { toast("Couldn't read the saves"); }
+      $("export-saves").disabled = false;
+    };
+    $("import-saves").onclick = () => $("import-saves-file").click();
+    $("import-saves-file").onchange = async () => {
+      const file = $("import-saves-file").files[0]; $("import-saves-file").value = "";
+      if (!file) return;
+      try { svShow("import", parseFile(await file.text()), "Choose which saves to put back. Saves with the same name will be replaced."); }
+      catch (e) { toast(e.message || "Couldn't read that file"); }
+    };
+    sv.querySelector("form").onsubmit = async (e) => {
+      e.preventDefault();
+      const sel = svSelection();
+      if (!sel.ls.size && !sel.db.size) { $("sv-error").textContent = "Tick at least one item."; return; }
+      $("sv-go").disabled = true; $("sv-cancel").disabled = true; $("sv-error").textContent = "";
+      const label = $("sv-go").textContent; $("sv-go").textContent = "Working…";
+      try {
+        if (svMode === "export") {
+          const text = await buildExport(sel);
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+          a.download = `silicon-game-saves-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+          sv.close(); toast("Game saves downloaded");
+        } else {
+          const r = await importSaves(svSites, sel);
+          if (r.problems.length) { $("sv-error").textContent = `Imported ${r.items} item${r.items === 1 ? "" : "s"}, but not everything: ${r.problems.join("; ")}`; }
+          else { sv.close(); toast(`Imported ${r.items} item${r.items === 1 ? "" : "s"} from ${r.sites} site${r.sites === 1 ? "" : "s"}`); }
+        }
+      } catch (err) { $("sv-error").textContent = `Couldn't finish: ${err.message || err}`; }
+      $("sv-go").disabled = false; $("sv-cancel").disabled = false; $("sv-go").textContent = label;
+    };
+    $("clear-data").onclick = () => confirmAction({ typed: true, title: "Clear data?", button: "Clear data",
+      text: "This permanently deletes your shortcuts, favorites, recently played, saved game data and cached proxy data. Settings are kept.", run: () => D.clear() });
+    $("reset-settings").onclick = () => confirmAction({ typed: true, title: "Reset all settings?", button: "Reset settings",
+      text: "This puts every setting back to its default, including your panic key, cloak and proxy options. Your data is kept.", run: () => D.resetSettings() });
+    $("import-data").onclick = () => $("import-file").click();
+    $("import-file").onchange = async () => {
+      const file = $("import-file").files[0]; $("import-file").value = "";
+      if (!file) return;
+      try {
+        const entries = D.parse(await file.text());
+        confirmAction({ typed: false, title: "Import this backup?", button: "Import",
+          text: `This replaces your current settings and data with the contents of "${file.name}" (${entries.length} saved items). Silicon will reload.`, run: () => D.import(entries) });
+      } catch (err) { toast(err.message || "Couldn't read that file"); }
+    };
+
+    // Search across rows
+    function filter() {
+      const q = $("filter").value.trim().toLowerCase();
+      let any = false;
+      document.querySelectorAll(".s-section").forEach((sec) => {
+        let n = 0;
+        sec.querySelectorAll(".s-row").forEach((r) => { const hit = !q || r.textContent.toLowerCase().includes(q); r.classList.toggle("hidden-by-search", !hit); if (hit) n++; });
+        sec.querySelectorAll(".s-card").forEach((c) => (c.style.display = q && !c.querySelector(".s-row:not(.hidden-by-search)") ? "none" : ""));
+        if (q) sec.classList.toggle("active", n > 0);
+        any ||= n > 0;
+      });
+      if (!q) { const a = document.querySelector(".s-nav button.active").dataset.s; show(a); }
+      $("empty").style.display = q && !any ? "block" : "none";
+    }
+    $("filter").oninput = filter;
+  </script>
+</body>
+</html>

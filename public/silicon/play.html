@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="play">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="play-page">
+  <header class="p-bar">
+    <button class="p-btn" id="back" title="Back to games"><span class="ms">arrow_back</span><span>Games</span></button>
+    <div class="p-title"><span id="name"></span><span class="p-src" id="src"></span></div>
+    <div class="p-actions">
+      <button class="p-icon" id="proxy" title="Load through the proxy" hidden><span class="ms">vpn_lock</span></button>
+      <button class="p-icon" id="fav" title="Favorite"><span class="ms">star</span></button>
+      <button class="p-icon" id="reload" title="Refresh game"><span class="ms">refresh</span></button>
+      <button class="p-icon" id="full" title="Fullscreen"><span class="ms">fullscreen</span></button>
+    </div>
+  </header>
+  <main class="p-stage" id="stage"></main>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+    const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+    const id = new URLSearchParams(location.search).get("game");
+    $("back").onclick = () => parent.silicon.navigate(window, "silicon://games");
+    const hideTools = (...ids) => ids.forEach((b) => ($(b).hidden = true));
+    const message = (icon, title, text) => { $("stage").innerHTML = `<div class="p-msg"><span class="ms">${icon}</span><h2></h2><p></p></div>`; $("stage").querySelector("h2").textContent = title; $("stage").querySelector("p").textContent = text; };
+
+    let g, sourceLabel = "";
+    try {
+      const r = await fetch("/api/games/" + encodeURIComponent(id || ""));
+      if (r.ok) { const d = await r.json(); g = d.game; sourceLabel = d.source?.label || ""; }
+      else if (r.status !== 404) throw 0;
+    } catch { message("cloud_off", "Couldn't load this game", "The game server didn't answer. Go back and try again."); hideTools("fav", "reload", "full"); }
+
+    if (!g && !$("stage").firstChild) { $("name").textContent = "Game not found"; message("sports_esports", "Game not found", "That game isn't in the library."); hideTools("fav", "reload", "full"); }
+    else if (g) {
+      document.title = g.title;
+      parent.silicon.retitle(window); // the tab label was read at load time, before the title was known
+      $("name").textContent = g.title;
+      $("src").textContent = sourceLabel + (g.byline ? " · " + g.byline : "");
+      write("games:recent", [{ id: g.id, t: Date.now() }, ...read("games:recent", []).filter((x) => x.id !== g.id)].slice(0, 12));
+
+      const favs = new Set(read("games:favs", []));
+      const paintFav = () => { $("fav").classList.toggle("on", favs.has(g.id)); $("fav").firstElementChild.classList.toggle("fill", favs.has(g.id)); };
+      $("fav").onclick = () => { favs.has(g.id) ? favs.delete(g.id) : favs.add(g.id); write("games:favs", [...favs]); paintFav(); };
+      paintFav();
+
+      // GN-Math-style pages are text/plain upstream: direct play uses this server's HTML copy, proxied play fixes the type in the browser.
+      const src = g.path || g.url;
+      const directSrc = g.kind === "html-text" ? "/api/games/play/" + encodeURIComponent(g.id) : src;
+      if (g.mode === "external") {
+        // Sites that can't be embedded: open directly in a new browser tab (no proxy).
+        $("stage").innerHTML = `<div class="p-msg"><span class="ms">open_in_new</span><h2></h2><p>This one runs on its own site and can't be shown inside Silicon.</p><button class="p-btn primary" id="launch">Open game</button></div>`;
+        $("stage").querySelector("h2").textContent = g.title;
+        $("launch").onclick = () => window.open(src, "_blank", "noopener");
+        hideTools("reload", "full");
+      } else {
+        const f = document.createElement("iframe");
+        f.className = "p-frame"; f.title = g.title;
+        f.allow = "fullscreen; gamepad; autoplay; clipboard-write; accelerometer; gyroscope; cross-origin-isolated";
+        // Remote games go through the proxy when "Proxy games" is on (so a blocked host like selenite.cc still works).
+        // Games hosted by this server (g.path) are always loaded directly. Emulator games don't run through the
+        // proxy yet (their core loads in a background worker that fails), so they default to direct; the shield
+        // button switches any remote game either way and remembers the choice.
+        const remote = !g.path && /^https?:/i.test(src);
+        const override = read("games:proxy:" + g.id, null);
+        let viaProxy = remote && (override ?? (parent.silicon.settings.get().proxyGames && !(g.tags || []).includes("emulator")));
+        const veil = document.createElement("div");
+        veil.className = "p-veil";
+        veil.innerHTML = `<div class="p-spin"></div><div class="p-loading"></div><div class="p-slow" hidden></div>`;
+        veil.querySelector(".p-loading").textContent = "Loading " + g.title + "…";
+        const slow = veil.querySelector(".p-slow");
+        const paintProxy = () => { $("proxy").classList.toggle("on", viaProxy); $("proxy").title = viaProxy ? "Loaded through the proxy (click to load directly)" : "Loaded directly (click to use the proxy)"; };
+        if (remote) { $("proxy").hidden = false; paintProxy(); }
+        let timer, proxied;
+        const showSlow = () => {
+          slow.hidden = false;
+          slow.textContent = viaProxy ? "Still loading. Bigger games take a while. " : "Still loading. Bigger games take a while. ";
+          if (remote) { const b = document.createElement("button"); b.className = "p-link"; b.textContent = viaProxy ? "Try loading directly" : "Try the proxy"; b.onclick = flip; slow.append(b); }
+        };
+        const load = async () => {
+          veil.classList.remove("gone"); slow.hidden = true; clearTimeout(timer); timer = setTimeout(showSlow, 9000);
+          if (!viaProxy) { f.src = directSrc; return; }
+          try { proxied ||= await parent.silicon.createGameFrame(f); proxied.go(src); }
+          catch (err) { veil.querySelector(".p-loading").textContent = "Couldn't start the proxy: " + (err.message || err); veil.querySelector(".p-spin").hidden = true; }
+        };
+        const flip = () => { viaProxy = !viaProxy; write("games:proxy:" + g.id, viaProxy); paintProxy(); veil.querySelector(".p-spin").hidden = false; veil.querySelector(".p-loading").textContent = "Loading " + g.title + "…"; f.src = "about:blank"; setTimeout(load, 30); };
+        $("proxy").onclick = flip;
+        f.onload = () => { if (f.getAttribute("src") && f.getAttribute("src") !== "about:blank") { clearTimeout(timer); veil.classList.add("gone"); } };
+        $("stage").append(f, veil);
+        $("reload").onclick = () => { f.src = "about:blank"; setTimeout(load, 30); };
+        $("full").onclick = () => f.requestFullscreen?.();
+        load();
+        f.focus();
+      }
+    }
+  </script>
+</body>
+</html>
