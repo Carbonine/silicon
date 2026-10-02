@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-silicon="error">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Can't reach this site</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script>try{var t=localStorage.getItem("theme");if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="err-page">
+  <main class="err">
+    <span class="ms err-ico">cloud_off</span>
+    <h1 id="title">Can't reach this site</h1>
+    <p class="err-cause" id="cause"></p>
+    <ul class="err-list">
+      <li>The address may be mistyped, or the site may be down.</li>
+      <li>The site may block proxies or this server's connection.</li>
+      <li>This network may be blocking the connection to the proxy.</li>
+    </ul>
+    <div class="err-actions">
+      <button class="s-btn primary" id="reload">Reload</button>
+      <button class="s-btn" id="other"></button>
+      <button class="s-btn" id="home">Home</button>
+    </div>
+    <details class="err-details"><summary>Technical details</summary><pre id="detail"></pre></details>
+  </main>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const q = new URLSearchParams(location.search);
+    const url = q.get("u") || "", detail = q.get("d") || "";
+    let host = url; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+    $("title").textContent = host ? `Can't reach ${host}` : "Can't reach this site";
+    document.title = $("title").textContent;
+    $("detail").textContent = (url ? url + "\n\n" : "") + (detail || "No details were given.");
+
+    // A plain-language guess at the cause from the technical message (these messages vary, so this is only a hint).
+    const guess = (d) => /timed? ?out|timeout|took too long/i.test(d) ? "The site took too long to answer."
+      : /dns|resolve|lookup|not known|no such host|nxdomain/i.test(d) ? "The server couldn't find that address."
+      : /refused/i.test(d) ? "The site refused the connection."
+      : /certificate/i.test(d) ? "The site's security certificate wasn't accepted."
+      : /did not respond|service worker/i.test(d) ? "The proxy didn't respond."
+      : /tls|ssl|handshake|closed|incomplete|eof|reset|broken pipe/i.test(d) ? "Couldn't connect to the site. It may not exist, or it may be refusing the connection."
+      : "Something went wrong while loading the page.";
+    $("cause").textContent = guess(detail);
+
+    const S = parent.silicon.settings;
+    const cur = S.get().transport, other = cur === "epoxy" ? "libcurl" : "epoxy";
+    $("other").textContent = `Try ${other === "epoxy" ? "Epoxy" : "libcurl"}`;
+    $("other").title = `Switch the proxy transport from ${cur === "epoxy" ? "Epoxy" : "libcurl"} to ${other === "epoxy" ? "Epoxy" : "libcurl"} and reload`;
+    $("reload").onclick = () => url && parent.silicon.navigate(window, url);
+    $("other").onclick = async () => { $("other").disabled = true; try { await S.set({ transport: other }); } catch {} if (url) parent.silicon.navigate(window, url); };
+    $("home").onclick = () => parent.silicon.navigate(window, "silicon://newtab");
+    if (!url) { $("reload").hidden = $("other").hidden = true; }
+  </script>
+</body>
+</html>

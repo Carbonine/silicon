@@ -512,7 +512,7 @@ function setIcon(tab, { img, glyph } = {}) {
   }
   slot.replaceWith(el);
 }
-const INTERNAL_ICONS = { newtab: undefined, settings: "settings", games: "sports_esports", bookmarks: "bookmark", history: "history", play: "sports_esports" };
+const INTERNAL_ICONS = { newtab: undefined, error: "cloud_off", settings: "settings", games: "sports_esports", bookmarks: "bookmark", history: "history", play: "sports_esports" };
 
 // Tabs in the order they are shown (the strip's order, which drag-to-reorder changes), without ones that are closing.
 const openTabEls = () => [...$("tabs").children].filter((el) => el.classList.contains("tab") && !el.classList.contains("closing"));
@@ -568,14 +568,32 @@ function recordVisit(url, title) {
   } catch {}
 }
 
+// When a site can't be reached, the proxy's service worker answers with a bare text page ("Internal Service Worker Error: ...").
+// This spots that page and returns its message (or null for a normal page), so Silicon can show its own error page instead.
+function proxyErrorText(doc) {
+  try {
+    if (!doc.body || doc.body.children.length > 1) return null;
+    const t = (doc.body.innerText || "").trim();
+    if (t.length > 4000) return null;
+    if (/^Internal Service Worker Error:/i.test(t)) return t.replace(/^Internal Service Worker Error:\s*/i, "");
+    if (/^Couldn't load this page through the proxy/i.test(t)) return "The proxy did not respond (service worker). Reload the tab, or check that the server is running.";
+  } catch {}
+  return null;
+}
+function showProxyError(tab, detail) {
+  const q = new URLSearchParams({ u: tab.url, d: String(detail).slice(0, 600) });
+  try { tab.iframe.contentWindow.location.replace("/silicon/error?" + q); } catch { tab.iframe.src = "/silicon/error?" + q; } // replace: Back skips the failed page
+}
+
 function onLoad(tab) {
   setLoading(tab, false);
   attachKeys(tab.iframe.contentWindow); // silicon:// pages; proxied windows are covered by the frame plugin
   let doc; try { doc = tab.iframe.contentDocument; } catch { return; }
   if (!doc || doc.documentURI === "about:blank") return;
   const name = doc.documentElement.dataset.silicon;
+  if (!name) { const err = proxyErrorText(doc); if (err !== null) return showProxyError(tab, err); }
   if (name) {
-    tab.url = "silicon://" + name + (doc.location.search || "");
+    if (name !== "error") tab.url = "silicon://" + name + (doc.location.search || ""); // the error page keeps showing the address that failed
     applyThemeTo(tab.iframe, document.documentElement.dataset.theme);
   }
   setLabel(tab, doc.title || (name ? name : hostOf(tab.url)));

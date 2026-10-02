@@ -158,7 +158,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 
 ## Troubleshooting
 
-- **The page loads but sites don't (or "Couldn't load this page through the proxy").** Reload the tab. If you're not on `localhost`, make sure you're using HTTPS. Try the other transport in Settings → Proxy.
+- **"Can't reach this site".** When a site can't be loaded, Silicon shows this page with a likely cause and three buttons: Reload, Try the other transport (Epoxy or libcurl, switched for you) and Home. "Technical details" has the raw error. If it happens on every site, the connection to the proxy itself is failing: if you're not on `localhost` make sure you're using HTTPS, and check that the server is running.
 - **A game stays on its loading screen.** Press the shield button in the player to switch between the proxy and a direct load. Emulator-based games work best when loaded directly.
 - **Other devices on my network can't reach it.** The default `HOST=127.0.0.1` only allows this machine. Set `HOST=0.0.0.0`, and remember the proxy then works for everyone who can reach it. Service workers still need HTTPS on any address that isn't `localhost`.
 - **"Address already in use".** Another program is on that port. Set a different `PORT`.
