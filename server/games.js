@@ -181,47 +181,48 @@ async function seraph() {
   return games;
 }
 
-// ---- CKV (https://chickenkingswebsite.neocities.org): a static Neocities site. gamepage lists cards
-// <a class="game-link" href="x.html"><img src=..><div>Name</div></a>. Each x.html is only a wrapper (toolbar with a
-// "Home" button plus an iframe of the real game page), so the catalog resolves each wrapper to its inner game page
-// and plays that directly. If a wrapper can't be read, the wrapper page itself is used.
-const CKV = (process.env.CKV_URL || "https://chickenkingswebsite.neocities.org").replace(/\/$/, "");
+// ---- CKV, Chicken King's Vault (https://wanocapy.github.io/ChickenKingsVault): a static GitHub Pages site. games.js holds the
+// catalog as card markup, <a class="game-link" href="gamefiles/x.html"><img src=..><div>Name</div></a>. Each x.html is only a
+// wrapper (toolbar with a "Home" button plus an iframe of the real game page). The catalog is one request; a game's wrapper is
+// resolved to its real page only when that game is opened (see resolveCkv), so there are not hundreds of requests per refresh.
+const CKV = (process.env.CKV_URL || "https://wanocapy.github.io/ChickenKingsVault").replace(/\/$/, "");
 async function ckv() {
-  const opts = { headers: { "user-agent": UA }, signal: AbortSignal.timeout(25000) };
-  const res = await fetch(`${CKV}/gamepage`, opts);
+  const res = await fetch(`${CKV}/games.js`, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(25000) });
   if (!res.ok) throw new Error(`CKV answered ${res.status}`);
   const html = await res.text();
   const decode = (t) => t.replace(/&amp;/g, "&").replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
   const card = /<a class="game-link" href="([^"]+)">\s*<img src="([^"]+)"[^>]*>\s*<div>([^<]*)<\/div>/g;
-  const cards = [], seen = new Set();
+  const games = [], seen = new Set();
   for (const m of html.matchAll(card)) {
     const [, href, img, name] = m;
     if (seen.has(href) || /^[a-z]+:|^\//i.test(href)) continue;
     seen.add(href);
-    cards.push({ href, img, name: decode(name.trim()) });
+    const wrapper = new URL(href, CKV + "/").href;
+    games.push({
+      id: `ckv:${href.split("/").pop().replace(/\.html?$/i, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+      title: decode(name.trim()),
+      source: "ckv",
+      tags: [],
+      thumb: `/api/games/thumb/ckv/${encodeURIComponent(img.replace(/^\.?\//, ""))}`,
+      url: wrapper, // the wrapper page; replaced by the real game page when the game is opened
+      wrapper,
+    });
   }
-  // Resolve each wrapper to its inner game page, a few at a time.
-  const inner = new Map();
-  let next = 0;
-  await Promise.all(Array.from({ length: 8 }, async () => {
-    while (next < cards.length) {
-      const c = cards[next++], wrapper = new URL(c.href, CKV + "/").href;
-      try {
-        const r = await fetch(wrapper, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(12000) });
-        const m = r.ok && (await r.text()).match(/<iframe[^>]*\bsrc=(?:"([^"]*)"|'([^']*)')/i); // match the same quote (names can contain ')
-        const src = m && (m[1] ?? m[2]);
-        if (src) inner.set(c.href, new URL(src, wrapper).href);
-      } catch {}
-    }
-  }));
-  return cards.map((c) => ({
-    id: `ckv:${c.href.replace(/\.html?$/i, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
-    title: c.name,
-    source: "ckv",
-    tags: [],
-    thumb: `/api/games/thumb/ckv/${encodeURIComponent(c.img.replace(/^\.?\//, ""))}`,
-    url: inner.get(c.href) || new URL(c.href, CKV + "/").href,
-  }));
+  if (!games.length) throw new Error("CKV: no games found (the site layout may have changed)");
+  return games;
+}
+// A wrapper's real game page, read from the iframe in the wrapper. Remembered in memory so each is looked up once.
+const ckvInner = new Map();
+async function resolveCkv(wrapper) {
+  if (ckvInner.has(wrapper)) return ckvInner.get(wrapper);
+  try {
+    const r = await fetch(wrapper, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(12000) });
+    const m = r.ok && (await r.text()).match(/<iframe[^>]*\bsrc=(?:"([^"]*)"|'([^']*)')/i); // the same quote on both sides (names can contain ')
+    const src = m && (m[1] ?? m[2]);
+    const url = src ? new URL(src, wrapper).href : null;
+    if (url) ckvInner.set(wrapper, url);
+    return url;
+  } catch { return null; }
 }
 
 // ---- Games hosted by this server, listed in public/games/games.json ({ games: [...] })
@@ -323,7 +324,11 @@ export function mountGames(app) {
     sendImage(res, `${TRUFFLED}${p}`);
   });
   app.get("/api/games/thumb/seraph/:file", (req, res) => sendImage(res, `${SERAPH}/images/thumbnails/${encodeURIComponent(req.params.file)}`));
-  app.get("/api/games/thumb/ckv/:file", (req, res) => sendImage(res, `${CKV}/${encodeURIComponent(req.params.file)}`));
+  app.get("/api/games/thumb/ckv/:file", (req, res) => { // "gameimages/x.png": encode each part, keep the slashes
+    const f = req.params.file;
+    if (f.includes("..") || f.includes("//") || /^\/|:/.test(f)) return res.status(400).end();
+    sendImage(res, `${CKV}/${f.split("/").map(encodeURIComponent).join("/")}`);
+  });
   app.get("/api/games/thumb/wasmrip/:file", (req, res) => sendImage(res, `${WASMRIP}/img/${encodeURIComponent(req.params.file)}`));
   app.get("/api/games/thumb/gnmath/:file", (req, res) =>
     gnBases.cover ? sendImage(res, `${GNMATH}${gnBases.cover}/${encodeURIComponent(req.params.file)}`) : res.status(404).end());
@@ -354,8 +359,9 @@ export function mountGames(app) {
   app.get("/api/games/:id", async (req, res) => {
     const key = req.params.id.split(":")[0];
     const list = (await gamesFor(SOURCES[key] ? key : "local")).games;
-    const game = (await hiddenIds()).has(req.params.id) ? null : list.find((g) => g.id === req.params.id);
+    let game = (await hiddenIds()).has(req.params.id) ? null : list.find((g) => g.id === req.params.id);
     if (!game) return res.status(404).json({ error: "Game not found" });
+    if (game.wrapper) { const inner = await resolveCkv(game.wrapper); if (inner) game = { ...game, url: inner }; } // CKV: the real page, not its wrapper
     res.set("Cache-Control", "public, max-age=60").json({ game, source: { key, label: SOURCES[key]?.label || key } });
   });
 }

@@ -148,7 +148,7 @@ Games are not stored in this repository or on your disk. Each source is read liv
 | GN-Math | gn-math.dev |
 | Truffled | truffled.lol |
 | Seraph | ijnfem.github.io/seraph |
-| CKV | chickenkingswebsite.neocities.org |
+| CKV (Chicken King's Vault) | wanocapy.github.io/ChickenKingsVault |
 | Wasm.RIP | wasm.rip |
 | Silicon | games hosted by this server in `public/games/` (see `public/games/games.json`). Empty by default, and hidden until you add one |
 
@@ -169,7 +169,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 
 - Some sites don't work through the proxy, especially ones that need WebRTC, DRM video, heavy sign-in flows, or that detect and block proxies. Sites that refuse to be loaded in a frame can behave differently.
 - Emulator-based games load their core in a background worker, which doesn't work through the proxy yet, so they default to loading directly (and may be blocked on restrictive networks).
-- Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh.
+- Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh. Some games also load their files from third-party hosts that can go offline or block them, in which case the game stays blank or on its loading screen. (For example, jsDelivr currently blocks the `gn-math` asset account, so games that use it don't load, with or without Silicon.)
 - Saved game data, bookmarks, history and settings live in your browser. Clearing site data removes them, so export your game saves if they matter. Game saves only cover games loaded through the proxy (a game loaded directly keeps its saves under its own site, which Silicon can't reach).
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
 - Silicon is not a full replacement for a browser: no extensions, no downloads manager, no find-in-page.
