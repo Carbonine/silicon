@@ -1,7 +1,7 @@
 {
   "name": "silicon",
   "version": "0.1.0",
-  "description": "Silicon: a minimal pseudo-browser and games launcher powered by Scramjet",
+  "description": "Self-hosted browser and games launcher built on the Scramjet web proxy: tabs, bookmarks, history and a live game library, all in one tab.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "private": true,
