@@ -2,6 +2,8 @@
 
 A self-hosted browser-in-a-tab and games launcher. You run it on your own computer or server, open it in any modern browser, and get tabs, bookmarks, history and a library of browser games, with sites and games loaded through the [Scramjet](https://github.com/MercuryWorkshop/scramjet) 2 web proxy. Express + Scramjet + a Wisp server in one process, with a vanilla HTML/CSS/JS frontend and no build step.
 
+Source code: <https://github.com/Carbonine/silicon>
+
 > **Experimental (v0.1 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
 
 ## Why use Silicon
@@ -51,7 +53,7 @@ A self-hosted browser-in-a-tab and games launcher. You run it on your own comput
 Requires [Node.js](https://nodejs.org/) 18 or newer and git.
 
 ```sh
-git clone <repo-url> silicon
+git clone https://github.com/Carbonine/silicon.git silicon
 cd silicon
 npm install
 npm run dev
@@ -68,7 +70,7 @@ Then open <http://localhost:3000>.
 Do the same thing on the server, then expose it safely:
 
 ```sh
-git clone <repo-url> silicon
+git clone https://github.com/Carbonine/silicon.git silicon
 cd silicon
 npm install --omit=dev
 HOST=127.0.0.1 PORT=3000 NODE_ENV=production node server/index.js

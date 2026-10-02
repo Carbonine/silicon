@@ -136,6 +136,8 @@
           <div class="s-row"><div class="s-label"><div class="t">Version</div><div class="d" id="app-version">v0.1 · beta</div></div></div>
           <div class="s-row"><div class="s-label"><div class="t">Proxy engine</div><div class="d" id="ver">Scramjet</div></div></div>
           <div class="s-row"><div class="s-label"><div class="t">License</div><div class="d">GNU Affero General Public License v3.0</div></div></div>
+          <div class="s-row"><div class="s-label"><div class="t">Source code</div><div class="d">Silicon is open source. The code, issues and releases are on GitHub.</div></div>
+            <div class="s-ctl"><button class="s-btn" id="open-source">Open on GitHub</button></div></div>
         </div>
 
         <h2>Credits</h2>
@@ -321,6 +323,8 @@
     }
     $("sv-cancel").onclick = () => sv.close();
     sv.addEventListener("click", (e) => { if (e.target === sv) sv.close(); });
+    // Opens in a Silicon tab, so it goes through the proxy like any other site
+    $("open-source").onclick = () => parent.silicon.openTab("https://github.com/Carbonine/silicon");
     $("export-saves").onclick = async () => {
       $("export-saves").disabled = true;
       try { svShow("export", await scan(), "Choose which saves to put in the file."); } catch { toast("Couldn't read the saves"); }

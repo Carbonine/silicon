@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Self-hosted browser and games launcher built on the Scramjet web proxy: tabs, bookmarks, history and a live game library, all in one tab.",
   "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/Carbonine/silicon",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Carbonine/silicon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Carbonine/silicon/issues"
+  },
   "type": "module",
   "private": true,
   "scripts": {
