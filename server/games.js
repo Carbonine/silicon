@@ -8,9 +8,14 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const UA = "Mozilla/5.0 (compatible; Silicon)";
 const TTL = 60 * 60 * 1000;
-// Games to leave out of the library: an array of ids in server/games-hidden.json (read on every request, no restart needed).
+// Games to leave out of the library, listed in server/games-hidden.json (read on every request, no restart needed).
+// The file is { "hidden": [ { "id": "source:id", "reason": "why" } ] }. A plain array of ids also works.
 async function hiddenIds() {
-  try { return new Set(JSON.parse(await readFile(join(here, "games-hidden.json"), "utf8"))); } catch { return new Set(); }
+  try {
+    const data = JSON.parse(await readFile(join(here, "games-hidden.json"), "utf8"));
+    const list = Array.isArray(data) ? data : data.hidden || [];
+    return new Set(list.map((x) => (typeof x === "string" ? x : x?.id)).filter(Boolean));
+  } catch { return new Set(); }
 } // refetch a source at most once an hour
 
 // Game shape: { id, title, source, tags: string[], category?, thumb?, url (embed) | path (hosted here), mode?, top?, warnings?: string[] }

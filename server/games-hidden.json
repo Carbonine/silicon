@@ -1,1 +1,10 @@
-["gnmath:253"]
+{
+  "_comment": "Games left out of the library. JSON can't hold comments, so each entry carries its reason. To hide a game, add { \"id\": \"source:id\", \"reason\": \"...\" }. The server rereads this file on every request, so no restart is needed.",
+  "hidden": [
+    {
+      "id": "gnmath:253",
+      "title": "Chat Bot AI (A.I GPT)",
+      "reason": "Hidden because it is a chatbot page rather than a playable game, and it doesn't work."
+    }
+  ]
+}

@@ -31,7 +31,7 @@ A self-hosted browser-in-a-tab and games launcher. You run it on your own comput
 **Games**
 - A library fed live by several sources (see [Game sources](#game-sources)). One source is shown at a time, biggest first, with search, category chips, sorting, favorites, "continue playing", and rows for new and popular games where a source provides them.
 - A game player with refresh, fullscreen and back buttons, and a shield button that switches between loading the game through the proxy (default) and loading it directly. Your choice is remembered per game.
-- Games from sources can be hidden by listing their ids in `server/games-hidden.json`.
+- Games from sources can be hidden by adding them to `server/games-hidden.json`, with a note on why.
 
 **Privacy and stealth**
 - **Panic key:** one key press sends the tab to a page of your choice, on every page.
