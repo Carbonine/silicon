@@ -154,12 +154,14 @@ Games are not stored in this repository or on your disk. Each source is read liv
 
 **Silicon does not host, own or control these games or sites.** It only links to them and, by default, loads them through your own server's proxy. Their content belongs to their authors and sites, and a source can change or disappear at any time. You are responsible for the sources you enable and for following the rules of the sites and networks you use.
 
+**If a game doesn't load or doesn't work, that is usually the game's source, not Silicon.** Silicon only passes the game along. Each game is hosted by its source (and often loads its files from other sites), so a game can be broken, slow or missing no matter how you open it. A good test is the shield button in the player: if the game fails both through the proxy **and** loaded directly, the problem is on the source's side (for example the game was taken down, a file it needs is blocked, or the site is down) and Silicon can't fix it. Only a game that works one way but not the other points to a proxy problem, and that's worth reporting. Games that are known to be broken can be left out with `server/games-hidden.json`.
+
 To add a source, write an adapter in `server/games.js` (an async function that returns a list of games) and register it in `SOURCES`.
 
 ## Troubleshooting
 
 - **"Can't reach this site".** When a site can't be loaded, Silicon shows this page with a likely cause and three buttons: Reload, Try the other transport (Epoxy or libcurl, switched for you) and Home. "Technical details" has the raw error. If it happens on every site, the connection to the proxy itself is failing: if you're not on `localhost` make sure you're using HTTPS, and check that the server is running.
-- **A game stays on its loading screen.** Press the shield button in the player to switch between the proxy and a direct load. Emulator-based games work best when loaded directly.
+- **A game stays on its loading screen or is blank.** Press the shield button in the player to switch between the proxy and a direct load. Emulator-based games work best when loaded directly. If it fails both ways, the game itself is broken at its source (see [Game sources](#game-sources)), not something Silicon can fix.
 - **Other devices on my network can't reach it.** The default `HOST=127.0.0.1` only allows this machine. Set `HOST=0.0.0.0`, and remember the proxy then works for everyone who can reach it. Service workers still need HTTPS on any address that isn't `localhost`.
 - **"Address already in use".** Another program is on that port. Set a different `PORT`.
 - **A game source is empty.** Its site may be down or blocked from your server. The other sources keep working, and it is fetched again at the next refresh.
@@ -169,7 +171,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 
 - Some sites don't work through the proxy, especially ones that need WebRTC, DRM video, heavy sign-in flows, or that detect and block proxies. Sites that refuse to be loaded in a frame can behave differently.
 - Emulator-based games load their core in a background worker, which doesn't work through the proxy yet, so they default to loading directly (and may be blocked on restrictive networks).
-- Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh. Some games also load their files from third-party hosts that can go offline or block them, in which case the game stays blank or on its loading screen. (For example, jsDelivr currently blocks the `gn-math` asset account, so games that use it don't load, with or without Silicon.)
+- Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh. Individual games can also be broken at the source, for example when they load files from a third-party host that has gone offline or blocked them (jsDelivr currently blocks the `gn-math` asset account, so games that use it don't load). A game that fails both through the proxy and loaded directly is a source problem, not a Silicon one.
 - Saved game data, bookmarks, history and settings live in your browser. Clearing site data removes them, so export your game saves if they matter. Game saves only cover games loaded through the proxy (a game loaded directly keeps its saves under its own site, which Silicon can't reach).
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
 - Silicon is not a full replacement for a browser: no extensions, no downloads manager, no find-in-page.
