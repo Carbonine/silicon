@@ -323,8 +323,8 @@
     }
     $("sv-cancel").onclick = () => sv.close();
     sv.addEventListener("click", (e) => { if (e.target === sv) sv.close(); });
-    // Opens in a Silicon tab, so it goes through the proxy like any other site
-    $("open-source").onclick = () => parent.silicon.openTab("https://github.com/Carbonine/silicon");
+    // Opens in a new tab of the browser itself (not a Silicon tab), so it doesn't go through the proxy
+    $("open-source").onclick = () => window.open("https://github.com/Carbonine/silicon", "_blank", "noopener");
     $("export-saves").onclick = async () => {
       $("export-saves").disabled = true;
       try { svShow("export", await scan(), "Choose which saves to put in the file."); } catch { toast("Couldn't read the saves"); }
