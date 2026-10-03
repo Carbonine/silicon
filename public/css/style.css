@@ -123,3 +123,13 @@ body { display: flex; flex-direction: column; background: var(--frame); }
 .sg-img { flex: none; width: 20px; height: 20px; border-radius: 3px; }
 .sg-main { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .sg-sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+
+/* Find in page */
+#findbar { position: fixed; z-index: 55; top: 0; right: 16px; display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 6px 0 14px; background: var(--menu); border-radius: 0 0 12px 12px; box-shadow: 0 4px 16px rgba(0,0,0,.3), 0 0 0 1px var(--border); }
+#findbar[hidden] { display: none; }
+#find-input { width: 210px; height: 30px; padding: 0 4px; font: inherit; font-size: 14px; color: var(--text); background: transparent; border: 0; outline: none; }
+#find-input::placeholder { color: var(--muted); }
+#find-count { min-width: 52px; margin: 0 4px 0 2px; padding-left: 8px; font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; border-left: 1px solid var(--border); }
+#findbar .icon-btn { width: 30px; height: 30px; }
+#findbar .icon-btn .ms { font-size: 20px; }
+#findbar.none #find-input { color: #f28b82; }

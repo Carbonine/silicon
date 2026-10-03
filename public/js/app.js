@@ -199,6 +199,8 @@ function onKey(e) {
     openTab("silicon://history");
     return;
   }
+  // Find in page: Ctrl+F (Cmd+F on a Mac)
+  if (!e.altKey && !e.shiftKey && (e.ctrlKey !== e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); e.stopImmediatePropagation(); openFind(); return; }
   // Tabs. On Windows and Linux, browsers keep Ctrl+T, W, Tab and 1-9 for themselves, so those only reach Silicon when the
   // browser lets them through (Ctrl is free on a Mac); the Alt versions work everywhere.
   if (tabShortcut(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
@@ -329,7 +331,7 @@ function showMenu(items, at, { align = "right" } = {}) {
 // Close on a click elsewhere in the shell, on Escape, or when focus moves into a page (clicks inside a frame never reach us).
 document.addEventListener("pointerdown", (e) => { if (!menuEl.hidden && !menuEl.contains(e.target) && !e.target.closest("[data-opens-menu]")) closeMenu(); }, true);
 addEventListener("blur", closeMenu);
-addEventListener("resize", () => { closeMenu(); renderBookmarkBar(); });
+addEventListener("resize", () => { closeMenu(); renderBookmarkBar(); if (!findBar.hidden) placeFindBar(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menuEl.hidden) { closeMenu(); e.stopPropagation(); } }, true);
 
 $("menu-btn").onclick = () => {
@@ -359,6 +361,7 @@ function showShortcuts() {
       ["Go to the last tab", ["Ctrl+9", "Alt+9"]],
     ]],
     ["Pages", [
+      ["Find in page", ["Ctrl+F"]],
       ["Bookmark this page", ["Ctrl+D"]],
       ["Bookmarks", ["Ctrl+Shift+O"]],
       ["Show or hide the bookmarks bar", ["Ctrl+Shift+B"]],
@@ -602,6 +605,7 @@ function onLoad(tab) {
   if (!name) setTimeout(() => { try { const i = pageIcon(tab.iframe.contentDocument); if (i && i !== tab.lastIcon && tab.iframe.contentDocument === doc) setIcon(tab, { img: i }); } catch {} }, 2000); // icons set by scripts
   tab.iframe.classList.remove("pending");
   showAddress(tab);
+  if (!findBar.hidden && tab.id === active) runFind(); // a new page: search it too
 }
 
 function activate(id) {
@@ -617,6 +621,7 @@ function activate(id) {
   else if (b.offsetLeft + b.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = b.offsetLeft + b.offsetWidth - strip.clientWidth;
   address.value = "";
   closeSuggestions();
+  if (!findBar.hidden) { clearFindMarks(); runFind(); } // the bar stays open and searches the new tab
   showAddress(tab);
   syncLoader();
 }
@@ -749,6 +754,87 @@ $("tabs").addEventListener("contextmenu", (e) => {
   ], { x: e.clientX, y: e.clientY });
 });
 $("new-tab").onclick = () => openTab("silicon://newtab");
+// ---------- Find in page ----------
+// Searches the text of the open tab and marks matches with the browser's highlight feature (CSS.highlights), so the page itself
+// is not changed. Works on proxied pages and on silicon:// pages, because both live in this tab's frame. Matches that are split
+// across formatting tags (for example "he<b>llo</b>") are not found.
+const findBar = $("findbar"), findInput = $("find-input"), findCount = $("find-count");
+let findRanges = [], findIndex = -1, findWin = null, findTimer;
+const FIND_MAX = 5000;
+function findDoc() { try { return tabs.get(active)?.iframe.contentDocument || null; } catch { return null; } }
+function clearFindMarks() {
+  try { findWin?.CSS?.highlights?.delete("silicon-find"); findWin?.CSS?.highlights?.delete("silicon-find-current"); } catch {}
+  findRanges = []; findIndex = -1;
+}
+function placeFindBar() { findBar.style.top = stage.getBoundingClientRect().top + "px"; } // just under the toolbar and bookmarks bar
+function runFind(keepPlace) {
+  placeFindBar();
+  const prev = findIndex;
+  clearFindMarks();
+  const q = findInput.value, doc = findDoc(), win = doc?.defaultView;
+  findBar.classList.remove("none"); findCount.textContent = "";
+  if (!q || !doc || !win || !win.CSS?.highlights || typeof win.Highlight === "undefined") {
+    if (q && win && !win.CSS?.highlights) findCount.textContent = "Not supported";
+    return;
+  }
+  findWin = win;
+  if (!doc.getElementById("silicon-find-style")) { // colours for the marks, added once to the page's head
+    const st = doc.createElement("style"); st.id = "silicon-find-style";
+    st.textContent = "::highlight(silicon-find){background-color:#ffe066;color:#000}::highlight(silicon-find-current){background-color:#ff9632;color:#000}";
+    (doc.head || doc.documentElement).append(st);
+  }
+  const needle = q.toLowerCase(), ranges = [];
+  const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => {
+      const el = n.parentElement;
+      if (!el || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|TEXTAREA|OPTION)$/.test(el.tagName) || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      try { if (el.checkVisibility && !el.checkVisibility({ checkVisibilityCSS: true })) return NodeFilter.FILTER_REJECT; } catch {} // hidden text isn't searched
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  for (let n = walker.nextNode(); n && ranges.length < FIND_MAX; n = walker.nextNode()) {
+    const text = n.nodeValue.toLowerCase();
+    for (let i = text.indexOf(needle); i !== -1 && ranges.length < FIND_MAX; i = text.indexOf(needle, i + needle.length)) {
+      const r = doc.createRange(); r.setStart(n, i); r.setEnd(n, i + needle.length); ranges.push(r);
+    }
+  }
+  findRanges = ranges;
+  if (!ranges.length) { findBar.classList.add("none"); findCount.textContent = "0/0"; return; }
+  win.CSS.highlights.set("silicon-find", new win.Highlight(...ranges));
+  showFindMatch(keepPlace && prev >= 0 ? Math.min(prev, ranges.length - 1) : 0);
+}
+function showFindMatch(i) {
+  if (!findRanges.length) return;
+  findIndex = (i + findRanges.length) % findRanges.length;
+  const r = findRanges[findIndex];
+  try {
+    findWin.CSS.highlights.set("silicon-find-current", new findWin.Highlight(r));
+    r.startContainer.parentElement?.scrollIntoView({ block: "center", inline: "nearest" });
+  } catch {}
+  findCount.textContent = `${findIndex + 1}/${findRanges.length}${findRanges.length >= FIND_MAX ? "+" : ""}`;
+}
+function openFind() {
+  const doc = findDoc();
+  let sel = ""; try { sel = doc?.defaultView.getSelection().toString().trim(); } catch {}
+  findBar.hidden = false; placeFindBar();
+  if (sel && sel.length < 100 && !/\n/.test(sel)) findInput.value = sel; // start from what is selected
+  findInput.focus(); findInput.select();
+  runFind();
+}
+function closeFind() {
+  if (findBar.hidden) return;
+  clearFindMarks(); findBar.hidden = true; findCount.textContent = "";
+  try { tabs.get(active)?.iframe.contentWindow.focus(); } catch {}
+}
+findInput.addEventListener("input", () => { clearTimeout(findTimer); findTimer = setTimeout(() => runFind(), 120); });
+findInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); showFindMatch(findIndex + (e.shiftKey ? -1 : 1)); }
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFind(); }
+});
+$("find-next").onclick = () => showFindMatch(findIndex + 1);
+$("find-prev").onclick = () => showFindMatch(findIndex - 1);
+$("find-close").onclick = closeFind;
+
 // ---------- Address bar suggestions ----------
 // Matches what you type against your bookmarks, your history and the silicon:// pages, all on this device. Nothing you type is
 // sent anywhere until you press Enter, and there are no search suggestions from a search engine for that reason.

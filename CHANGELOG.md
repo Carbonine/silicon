@@ -6,9 +6,13 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
-## Unreleased
+## Unreleased (v0.2 beta)
 
-Nothing yet.
+### Added
+- Find in page (Ctrl+F, or Cmd+F on a Mac): a small bar with a match count, next and previous (Enter and Shift+Enter) and Esc to close. It highlights matches without changing the page, works on proxied sites and on Silicon's own pages, ignores upper and lower case, and starts from the text you have selected.
+
+### Changed
+- The version is now v0.2 beta.
 
 ## v0.1 beta (2026-10-02)
 

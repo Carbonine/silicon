@@ -50,6 +50,7 @@ Source code: <https://github.com/Carbonine/silicon>
 - Tabs you can drag to reorder, duplicate, close in bulk and reopen (up to the last 10 closed), with a right-click menu and middle-click to close. Tabs are not saved between sessions.
 - An address bar that suggests bookmarks, history and `silicon://` pages as you type. It matches only on your device, and nothing you type is sent to a search engine until you press Enter.
 - Back, forward, reload and home, a loading bar, and each tab shows the page's own icon.
+- Find in page (Ctrl+F), with a match count, next and previous, and highlighted matches. It works on proxied sites and on Silicon's own pages, and doesn't change the page.
 - A choice of search engines: DuckDuckGo, Google, Bing, Brave, Startpage, Ecosia, Wikipedia, Yandex, or your own.
 - Dark, light or system theme.
 - A shortcuts row on the new tab page (each shows the site's own icon), and a three-dots menu with bookmarks, history, settings and a keyboard shortcuts guide.
@@ -193,6 +194,7 @@ The three-dots menu has the full list. The main ones:
 | Reopen closed tab | Ctrl+Shift+T (or Alt+Shift+T) |
 | Next / previous tab | Ctrl+Tab, Ctrl+Shift+Tab (or Alt+], Alt+[) |
 | Go to tab 1 to 8 / last tab | Ctrl+1 to 8, Ctrl+9 (or Alt+1 to 9) |
+| Find in page | Ctrl+F |
 | Bookmark this page | Ctrl+D |
 | Bookmarks / bookmarks bar | Ctrl+Shift+O / Ctrl+Shift+B |
 | History | Ctrl+H |
@@ -236,7 +238,8 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 - Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh. Individual games can also be broken at the source, for example when they load files from a third-party host that has gone offline or blocked them (jsDelivr currently blocks the `gn-math` asset account, so games that use it don't load). A game that fails both through the proxy and loaded directly is a source problem, not a Silicon one.
 - Saved game data, bookmarks, history and settings live in your browser. Clearing site data removes them, so export your game saves if they matter. Game saves only cover games loaded through the proxy (a game loaded directly keeps its saves under its own site, which Silicon can't reach).
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
-- Silicon is not a full replacement for a browser: no extensions, no downloads manager, no find-in-page.
+- Silicon is not a full replacement for a browser: no extensions and no downloads manager.
+- Find in page only matches text that is visible and unbroken. Text hidden on the page isn't searched, and a phrase split across formatting tags (for example `he<b>llo</b>`) isn't found.
 - Only tested in recent Chromium-based browsers.
 - Icons on the new tab shortcuts are found and fetched by your server from the site itself (and cached in memory for a few hours). Some sites have no icon the server can reach, and then the tile shows a globe. Tab cloak icons are loaded by your browser from the sites themselves, and the custom cloak needs an icon address you provide.
 
