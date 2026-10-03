@@ -49,6 +49,13 @@ Run a full browser or operating system inside a tab using WebAssembly, in the wa
 - **Costs:** large downloads, high CPU and memory use, slow starts, and a poor fit for phones and school-issued hardware. It also needs its own network path, which could mean a separate Wisp connection.
 - **Status:** this is a "maybe" because it's a big step in weight and complexity, and may not fit Silicon's goal of staying light and simple. It would start as an experiment, likely behind a flag, before any decision.
 
-## Not planned
+## Not planned by default
 
-Accounts, sync, or anything that stores personal data on the server. Silicon keeps its data in your own browser.
+Accounts, sync, or anything that stores personal data on the server. Silicon keeps its data in your own browser, and that stays the default.
+
+The one exception is an opt-in for the person running a given instance:
+
+- The host can turn on accounts and sync for their own instance. It is **off by default**, and nothing changes unless they enable it.
+- It exists for convenience only, such as syncing particular settings, bookmarks or game saves between devices.
+- It will not be used for tracking, profiling or fingerprinting, and it will store only what's needed for the feature to work. The README and Settings will say exactly what's stored when it's on.
+- It's the host's decision for their own instance. Silicon as shipped doesn't phone home or collect anything.
