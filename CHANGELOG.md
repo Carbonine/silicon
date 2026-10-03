@@ -4,6 +4,8 @@ All notable changes to Silicon are listed here, newest first. **Read this before
 
 Silicon is in beta, so things can change between versions.
 
+> **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
+
 ## Unreleased
 
 Nothing yet.

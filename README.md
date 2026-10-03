@@ -93,6 +93,7 @@ Then open <http://localhost:3000>.
 - `npm run dev` starts everything in one process and restarts when files change. `npm start` runs the same server without the file watcher.
 - No API keys or cloud accounts are needed.
 - It listens on `127.0.0.1` by default, so only your own machine can reach it. This is the recommended way to run Silicon.
+- A fresh clone gives you the newest code, which can be ahead of the latest release. To run a released version instead, see [Updating](#updating).
 
 ## Running it on a server (VPS)
 
@@ -139,13 +140,24 @@ Some things to know: many datacenter IP addresses are blocked or challenged by l
 
 ## Updating
 
-Silicon doesn't update itself, and it never contacts GitHub to check. Each version is listed in the [changelog](CHANGELOG.md) and under the repository's Releases.
+Silicon doesn't update itself, and it never contacts GitHub to check. Each version is listed in the [changelog](CHANGELOG.md) and under the repository's Releases. **It's recommended to update only when a new version is released**, not after every commit: commits in between are work in progress and may be unfinished or broken.
 
 1. **Read the [changelog](CHANGELOG.md)** for the versions you're skipping. Anything you have to do, such as a new setting or a change to saved data, is noted there.
 2. **Optional but sensible:** in Settings → Data, press **Export data** (and **Export game saves** if you play games through the proxy) first, so you have a backup.
-3. **Get the new code,** from the Silicon folder:
+3. **Get the new version,** from the Silicon folder. To stay on released versions (recommended), switch to the release you want:
 
    ```sh
+   git fetch --tags
+   git checkout v0.2.0
+   npm install
+   ```
+
+   Use the version number from the Releases page or the changelog. (`git tag --list --sort=-v:refname` lists every version, newest first.) Git will say you're in a "detached HEAD" state. That's normal: it just means you're on a fixed release and not on the moving latest code.
+
+   If you'd rather follow the newest work, which is ahead of the latest release and may be unfinished, go back to the main branch and pull:
+
+   ```sh
+   git checkout main
    git pull
    npm install
    ```
@@ -156,7 +168,7 @@ Silicon doesn't update itself, and it never contacts GitHub to check. Each versi
 
 Your settings, bookmarks, history, favorites and game saves are kept in your browser, not in the Silicon folder, so updating doesn't touch them. Your `.env` file is yours and isn't overwritten either; compare it with `.env.example` after an update in case a new option was added.
 
-If you downloaded a zip instead of cloning, download the new version, copy your `.env` over if you made one, run `npm install`, and start it. Cloning with git is the easier way to stay up to date.
+If you downloaded a zip instead of cloning, download the new version from the Releases page, copy your `.env` over if you made one, run `npm install`, and start it. Cloning with git is the easier way to stay up to date.
 
 ## Configuration
 
