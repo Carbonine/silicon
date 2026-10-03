@@ -91,6 +91,39 @@ export function createFrame(iframe, onUrl, onWindow, { fixHtml = false, onOpen }
     }
     plugins.push(new WindowHook());
   }
+  // <a download> links: the browser would start the download outside the frame, and Scramjet's escaped-link
+  // redirect (above) then saves Silicon's own page instead of the file. Fetch it through the proxy and save that.
+  class DownloadFix extends u.ManagedPlugin {
+    constructor() { super("silicon-download-fix", []); }
+    install(frame) {
+      const rawHref = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, "href").get;
+      this.tap(frame.hooks.init.post, (ctx) => {
+        try {
+          ctx.window.addEventListener("click", async (e) => {
+            if (e.defaultPrevented || e.button !== 0) return;
+            const a = e.target?.closest?.("a[download][href]");
+            if (!a) return;
+            let link; try { link = new URL(rawHref.call(a)); } catch { return; }
+            if (link.origin !== location.origin || !link.pathname.startsWith(cfg.prefix)) return;
+            e.preventDefault(); e.stopImmediatePropagation();
+            try {
+              const inner = decodeURIComponent(link.pathname.slice(cfg.prefix.length).replace(/^[^/]*\/[^/]*\//, ""));
+              const res = await fetch(/^(blob|data):/i.test(inner) ? inner : link.href); // a page's own blob: and data: files are not on the network
+              if (!res.ok) throw new Error("HTTP " + res.status);
+              const fromHeader = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(res.headers.get("content-disposition") || "")?.[1];
+              const fromUrl = decodeURIComponent(new URL(decodeURIComponent(link.pathname.slice(cfg.prefix.length).replace(/^[^/]*\/[^/]*\//, ""))).pathname.split("/").pop() || "");
+              const name = a.getAttribute("download") || (fromHeader && decodeURIComponent(fromHeader)) || fromUrl || "download";
+              const url = URL.createObjectURL(await res.blob());
+              const save = document.createElement("a");
+              save.href = url; save.download = name; document.body.append(save); save.click(); save.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) { console.warn("Download failed:", err); }
+          }, true);
+        } catch {}
+      });
+    }
+  }
+  plugins.push(new DownloadFix());
   if (onOpen) {
     // target=_blank links and window.open() would otherwise open a whole new browser window with another
     // copy of Silicon (see CatchEscapedLinksPlugin above, which stays as the fallback). Open a tab instead.

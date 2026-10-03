@@ -49,6 +49,14 @@ Play games streamed from cloud gaming services, so full PC games run on someone 
 - Some will likely never work through a proxy. Streaming relies on WebRTC and DRM video, and sign-in flows are often strict. Silicon can only support the services that survive that, so which ones is something to find out by testing, not promise.
 - The first attempt (GeForce NOW, in an earlier build) didn't work, so this needs fresh research into what's actually possible before anything is built.
 
+## Extensions
+
+Install browser extensions and have them run on the sites you open through Silicon. Today Silicon has none, which the README lists as a limitation.
+
+- **A possible route: [Sapphire](https://github.com/x8rr/sapphire).** It's a Scramjet plugin that provides the `chrome.*` extension APIs inside proxied pages, so Chrome extensions (userscript managers and the like) can run against proxied sites. It attaches the same way Silicon already attaches its own plugins when it creates a tab's frame, so it would fit in without reworking Silicon. It ships no interface of its own, so Silicon would build a small extensions page (install, enable, remove) in the style of Bookmarks and History.
+- **Not decided.** Sapphire is young, and it emulates the extension APIs rather than being a real browser engine, so some extensions won't work. Its blocking-rules matcher also isn't hooked into Scramjet's request path yet, so extension-based ad blockers would need extra work, or the built-in ad blocking above would cover that instead.
+- Extensions run code on every page you visit through the proxy, so installing one needs the same care as in any browser. Silicon would keep the feature off by default and say so plainly in the README, and extensions would live only in your own browser, like the rest of your data.
+
 ## A virtual machine environment (maybe)
 
 Run a full browser or operating system inside a tab using WebAssembly, in the way some web desktops run Firefox or a Linux system in the page itself. Sites would load inside the virtual machine rather than through the proxy rewriter.
