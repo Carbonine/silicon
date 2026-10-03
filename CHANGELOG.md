@@ -16,6 +16,7 @@ Silicon is in beta, so things can change between versions.
 
 ### Fixed
 - Links that open in a new tab (`target="_blank"`) and pages that call `window.open()` now open a new Silicon tab next to the current one. Before, they opened a whole new browser window with another copy of Silicon, or did nothing.
+- Back and Forward now grey out when there is nowhere to go, in a fresh tab and at either end of a tab's history.
 - Typing an unknown `silicon://` address now puts the current page's address back in the address bar instead of leaving what you typed.
 
 ### Changed

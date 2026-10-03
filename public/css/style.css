@@ -59,8 +59,8 @@ body { display: flex; flex-direction: column; background: var(--frame); }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 
 @media (max-width: 520px) { .tab { flex-basis: 130px; width: 130px; } }
-#bookmark-btn:disabled { opacity: .4; cursor: default; }
-#bookmark-btn:disabled:hover { background: transparent; }
+#bookmark-btn:disabled, #back:disabled, #forward:disabled { opacity: .4; cursor: default; }
+#bookmark-btn:disabled:hover, #back:disabled:hover, #forward:disabled:hover { background: transparent; }
 #bookmark-btn.on { color: var(--accent); }
 
 /* Bookmarks bar (under the address bar) */

@@ -236,7 +236,9 @@ function onKey(e) {
 // Key events don't cross iframe boundaries, so the listener goes on every window we can reach.
 // Deduped by document: an iframe's window object survives navigation, but each page gets a new document.
 const keyed = new WeakSet();
+const navOf = new WeakMap(); // window -> its Navigation object, grabbed before a proxied page can hide it
 function attachKeys(win) {
+  try { if (win?.navigation) navOf.set(win, win.navigation); } catch {} // every new page has a new Navigation object
   try {
     const doc = win?.document;
     if (doc && !keyed.has(doc)) { keyed.add(doc); win.addEventListener("keydown", onKey, true); }
@@ -482,8 +484,19 @@ function renderBookmarkBar() {
     barEl.append(more);
   }
 }
+// Grey out Back and Forward when the tab's frame has nowhere to go (Navigation API; if a page hides it, both stay enabled).
+function paintNav(tab = tabs.get(active)) {
+  if (!tab || active !== tab.id) return;
+  let nav; try { const w = tab.iframe.contentWindow; nav = navOf.get(w) || w.navigation; } catch {}
+  const known = nav && typeof nav.canGoBack === "boolean" && typeof nav.canGoForward === "boolean";
+  $("back").disabled = known && !nav.canGoBack;
+  $("forward").disabled = known && !nav.canGoForward;
+}
+function paintNavSoon(tab) { paintNav(tab); setTimeout(() => paintNav(tab), 250); } // entries commit just after the load event
+
 const showAddress = (tab) => {
   if (active !== tab.id) return;
+  paintNavSoon(tab);
   paintBookmark(tab);
   paintZoom(tab);
   if (document.activeElement !== address) address.value = tab.url === "silicon://newtab" ? "" : tab.url;
@@ -952,8 +965,8 @@ $("address-form").onsubmit = (e) => {
 };
 address.addEventListener("focus", () => address.select());
 const win = () => tabs.get(active)?.iframe.contentWindow;
-$("back").onclick = () => win()?.history.back();
-$("forward").onclick = () => win()?.history.forward();
+$("back").onclick = () => { win()?.history.back(); setTimeout(() => paintNav(), 300); };
+$("forward").onclick = () => { win()?.history.forward(); setTimeout(() => paintNav(), 300); };
 function reloadActive() {
   const tab = tabs.get(active);
   const b = $("reload").firstElementChild;

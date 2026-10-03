@@ -41,6 +41,14 @@ Choose the browser identity that sites see.
 - Applied to the request header and to `navigator.userAgent`, along with the related client-hint headers, so the two agree with each other. A mismatch is a common giveaway.
 - Related to anti-fingerprinting, and the two would share the same settings area.
 
+## Cloud gaming
+
+Play games streamed from cloud gaming services, so full PC games run on someone else's hardware and only the video reaches your device. NVIDIA GeForce NOW is one example of such a service, not the target.
+
+- Each service would be added on its own terms, since they differ in how they sign in, stream and detect proxies.
+- Some will likely never work through a proxy. Streaming relies on WebRTC and DRM video, and sign-in flows are often strict. Silicon can only support the services that survive that, so which ones is something to find out by testing, not promise.
+- The first attempt (GeForce NOW, in an earlier build) didn't work, so this needs fresh research into what's actually possible before anything is built.
+
 ## A virtual machine environment (maybe)
 
 Run a full browser or operating system inside a tab using WebAssembly, in the way some web desktops run Firefox or a Linux system in the page itself. Sites would load inside the virtual machine rather than through the proxy rewriter.
