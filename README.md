@@ -1,10 +1,38 @@
 # Silicon
 
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Node.js 18+](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)
+
 A self-hosted browser-in-a-tab and games launcher. You run it on your own computer or server, open it in any modern browser, and get tabs, bookmarks, history and a library of browser games, with sites and games loaded through the [Scramjet](https://github.com/MercuryWorkshop/scramjet) 2 web proxy. Express + Scramjet + a Wisp server in one process, with a vanilla HTML/CSS/JS frontend and no build step.
 
 Source code: <https://github.com/Carbonine/silicon>
 
 > **Experimental (v0.1 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
+
+| | |
+| --- | --- |
+| ![The new tab page, with a bookmarks bar and shortcuts](docs/screenshots/newtab.png) | ![A website open through the proxy, with several tabs](docs/screenshots/browsing.png) |
+| ![The games library](docs/screenshots/games.png) | ![The privacy settings](docs/screenshots/settings.png) |
+
+*The games screenshot has the sources' cover art turned off.*
+
+## Contents
+
+- [Why use Silicon](#why-use-silicon)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Running it on a server (VPS)](#running-it-on-a-server-vps)
+- [Configuration](#configuration)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Game sources](#game-sources)
+- [Troubleshooting](#troubleshooting)
+- [Known limitations](#known-limitations)
+- [How it works](#how-it-works)
+- [Project layout](#project-layout)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
 ## Why use Silicon
 
@@ -64,6 +92,8 @@ Then open <http://localhost:3000>.
 - `npm run dev` starts everything in one process and restarts when files change. `npm start` runs the same server without the file watcher.
 - No API keys or cloud accounts are needed.
 - It listens on `127.0.0.1` by default, so only your own machine can reach it. This is the recommended way to run Silicon.
+
+**Updating:** run `git pull` and then `npm install` in the folder, and restart the server.
 
 ## Running it on a server (VPS)
 
@@ -196,12 +226,31 @@ public/sw.js             Scramjet service worker
 public/index.html        The browser shell
 public/js/app.js         Shell: tabs, address bar, bookmarks, menus, settings, privacy tools
 public/js/proxy-client.js  Browser side of the proxy (init, transport, frames)
-public/silicon/          silicon:// pages (newtab, games, play, bookmarks, history, settings)
+public/js/saves.js       Game saves export and import
+public/silicon/          silicon:// pages (newtab, games, play, bookmarks, history, settings, error)
 public/css/              theme.css (colors/fonts), style.css (shell), pages.css (pages)
 public/games/            Games hosted by this server
+docs/screenshots/        The screenshots shown above
 ```
 
 To add an internal page, create `public/silicon/NAME.html` with `data-silicon="NAME"` on `<html>` and add `NAME` to `INTERNAL` in `public/js/app.js`.
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Please open an issue first for anything big, so we can agree on it before you spend time on it.
+
+- **Reporting a problem:** say what you did, what you expected, and what happened, plus your browser and whether you run Silicon on `localhost` or a server. For a game that won't load, try the shield button in the player first: if it fails both through the proxy and loaded directly, it's the game's source, not Silicon (see [Game sources](#game-sources)).
+- **Changing the code:** fork the repository, make a branch, and open a pull request. Silicon is plain HTML, CSS and JavaScript with no build step and no frontend framework, so please keep it that way and match the style of the code around your change. Test by hand in a browser: run it with `npm run dev`, and try your change on both the dark and light themes. Please don't add a dependency without talking about it first.
+- **Adding a game source:** write an adapter in `server/games.js` and register it in `SOURCES` (see [Game sources](#game-sources)). Sources are read live and kept in memory, never copied into the repository.
+- **Licensing:** by contributing you agree that your work is released under the same AGPL-3.0 license as the rest of Silicon.
+
+## Security
+
+Silicon is a web proxy, so please be careful with it: run it on `localhost` or behind access control (see [Running it on a server](#running-it-on-a-server-vps)).
+
+If you find a security problem, **please report it privately** and don't open a public issue. On the repository page, go to **Security → Report a vulnerability**. Examples worth reporting: a way to make the server reach its own machine or a private network (the Wisp server and the icon fetcher are meant to refuse that), a way to run script in Silicon's own pages, or a way to read another user's saved data. Problems inside Scramjet, Wisp or a transport belong with [Mercury Workshop](https://github.com/MercuryWorkshop) instead, and a site or game that simply doesn't work through the proxy isn't a security issue.
+
+Silicon is a beta, so there is no support schedule: fixes go into the latest version.
 
 ## License
 
