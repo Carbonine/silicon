@@ -10,6 +10,7 @@ Silicon is in beta, so things can change between versions.
 
 ### Added
 - Find in page (Ctrl+F, Ctrl on a Mac too): a small bar with a match count, next and previous (Enter and Shift+Enter) and Esc to close. It highlights matches without changing the page, works on proxied sites and on Silicon's own pages, ignores upper and lower case, and starts from the text you have selected.
+- Zoom: Ctrl++, Ctrl+- and Ctrl+0 (Ctrl on a Mac too), from 25% to 500% in the usual steps. The level is remembered for each site, a percentage in the address bar shows when a site isn't at 100% (click it to reset), and all `silicon://` pages share one level. It scales the tab's frame with CSS, so the pages themselves aren't changed. Zoom levels are part of the saved data, so they're included in Export data.
 - Alt+Left and Alt+Right go back and forward (Option on a Mac). They are ignored while you type in a text field, where they move the cursor by a word.
 - Ctrl+L focuses the address bar and Ctrl+R reloads the page (Ctrl on a Mac too). Ctrl+Shift+R still hard-refreshes Silicon itself.
 

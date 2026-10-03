@@ -205,6 +205,11 @@ function onKey(e) {
     if (e.key.toLowerCase() === "l") { address.focus(); address.select(); } else reloadActive();
     return;
   }
+  // Zoom: Ctrl+Plus, Ctrl+Minus and Ctrl+0 (Ctrl on a Mac too)
+  if (!e.altKey && (e.ctrlKey !== e.metaKey)) {
+    const zk = e.key === "+" || e.key === "=" ? 1 : e.key === "-" || e.key === "_" ? -1 : e.key === "0" && !e.shiftKey ? 0 : null;
+    if (zk !== null) { e.preventDefault(); e.stopImmediatePropagation(); zk === 0 ? setZoom(1) : zoomBy(zk); return; }
+  }
   // Find in page: Ctrl+F (Cmd+F on a Mac)
   if (!e.altKey && !e.shiftKey && (e.ctrlKey !== e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); e.stopImmediatePropagation(); openFind(); return; }
   // Tabs. On Windows and Linux, browsers keep Ctrl+T, W, Tab and 1-9 for themselves, so those only reach Silicon when the
@@ -375,6 +380,9 @@ function showShortcuts() {
       ["Back and forward", ["Alt+Left", "Alt+Right"]],
       ["Go to the address bar", ["Ctrl+L"]],
       ["Reload the page", ["Ctrl+R"]],
+      ["Zoom in", ["Ctrl++"]],
+      ["Zoom out", ["Ctrl+-"]],
+      ["Reset zoom", ["Ctrl+0"]],
       ["Find in page", ["Ctrl+F"]],
       ["Bookmark this page", ["Ctrl+D"]],
       ["Bookmarks", ["Ctrl+Shift+O"]],
@@ -477,6 +485,7 @@ function renderBookmarkBar() {
 const showAddress = (tab) => {
   if (active !== tab.id) return;
   paintBookmark(tab);
+  paintZoom(tab);
   if (document.activeElement !== address) address.value = tab.url === "silicon://newtab" ? "" : tab.url;
   // Omnibox icon: search on the new tab page, lock for https, open lock for plain http.
   $("site-icon").textContent = tab.url === "silicon://newtab" ? "search" : tab.url.startsWith("silicon://") ? "info" : tab.url.startsWith("https:") ? "lock" : "lock_open";
@@ -768,6 +777,37 @@ $("tabs").addEventListener("contextmenu", (e) => {
   ], { x: e.clientX, y: e.clientY });
 });
 $("new-tab").onclick = () => openTab("silicon://newtab");
+// ---------- Zoom ----------
+// Zoom is remembered per site (all silicon:// pages share one level) in localStorage "zoom". The tab's frame is scaled with CSS
+// and made correspondingly larger or smaller, so the page lays out as it would at that zoom and the pages themselves are not touched.
+const ZOOM_KEY = "zoom", ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+const zoomSite = (url) => (/^https?:/i.test(url || "") ? hostOf(url) : "silicon://");
+const zoomLoad = () => { try { const z = JSON.parse(localStorage.getItem(ZOOM_KEY)); return z && typeof z === "object" ? z : {}; } catch { return {}; } };
+const zoomOf = (url) => { const z = Number(zoomLoad()[zoomSite(url)]); return z >= 0.25 && z <= 5 ? z : 1; };
+function paintZoom(tab = tabs.get(active)) {
+  if (!tab) return;
+  const z = zoomOf(tab.url), f = tab.iframe;
+  if (z === 1) { f.style.transform = f.style.width = f.style.height = f.style.transformOrigin = ""; }
+  else { f.style.transformOrigin = "0 0"; f.style.transform = `scale(${z})`; f.style.width = `${100 / z}%`; f.style.height = `${100 / z}%`; }
+  if (tab.id === active) { $("zoom-chip").hidden = z === 1; $("zoom-pct").textContent = Math.round(z * 100) + "%"; }
+}
+function setZoom(z) {
+  const tab = tabs.get(active); if (!tab) return;
+  const all = zoomLoad(), site = zoomSite(tab.url);
+  if (z === 1) delete all[site]; else all[site] = z;
+  try { localStorage.setItem(ZOOM_KEY, JSON.stringify(all)); } catch {}
+  for (const t of tabs.values()) if (zoomSite(t.url) === site) paintZoom(t); // every tab on the same site follows
+}
+function zoomBy(dir) {
+  const tab = tabs.get(active); if (!tab) return;
+  const cur = zoomOf(tab.url);
+  let i = ZOOM_LEVELS.findIndex((l) => l >= cur - 1e-6); if (i < 0) i = ZOOM_LEVELS.length - 1;
+  if (Math.abs(ZOOM_LEVELS[i] - cur) > 1e-6 && dir < 0) i++; // between steps, going down starts from the step below
+  setZoom(ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, i + dir))]);
+}
+$("zoom-chip").onclick = () => setZoom(1);
+addEventListener("storage", (e) => { if (e.key === ZOOM_KEY || e.key === null) for (const t of tabs.values()) paintZoom(t); });
+
 // ---------- Find in page ----------
 // Searches the text of the open tab and marks matches with the browser's highlight feature (CSS.highlights), so the page itself
 // is not changed. Works on proxied pages and on silicon:// pages, because both live in this tab's frame. Matches that are split

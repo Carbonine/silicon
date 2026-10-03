@@ -133,3 +133,10 @@ body { display: flex; flex-direction: column; background: var(--frame); }
 #findbar .icon-btn { width: 30px; height: 30px; }
 #findbar .icon-btn .ms { font-size: 20px; }
 #findbar.none #find-input { color: #f28b82; }
+
+/* Zoom: the percentage shows in the address bar whenever a site isn't at 100% */
+#zoom-chip { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; height: 26px; padding: 0 9px 0 6px; font: inherit; font-size: 12px; color: var(--text); background: var(--hover); border: 0; border-radius: 13px; cursor: pointer; }
+#zoom-chip[hidden] { display: none; }
+#zoom-chip:hover { background: var(--press); }
+#zoom-chip .ms { font-size: 16px; color: var(--icon); }
+.page { overflow: hidden; }
