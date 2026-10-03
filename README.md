@@ -142,7 +142,7 @@ Some things to know: many datacenter IP addresses are blocked or challenged by l
 
 ## Updating
 
-Silicon doesn't update itself, and it never contacts GitHub to check. Each version is listed in the [changelog](CHANGELOG.md) and under the repository's Releases. **It's recommended to update only when a new version is released**, not after every commit: commits in between are work in progress and may be unfinished or broken.
+Silicon doesn't update itself, and it never contacts GitHub to check. Each version is listed in the [changelog](CHANGELOG.md) and under the repository's Releases. Upcoming work is outlined in the [roadmap](ROADMAP.md). **It's recommended to update only when a new version is released**, not after every commit: commits in between are work in progress and may be unfinished or broken.
 
 1. **Read the [changelog](CHANGELOG.md)** for the versions you're skipping. Anything you have to do, such as a new setting or a change to saved data, is noted there.
 2. **Optional but sensible:** in Settings → Data, press **Export data** (and **Export game saves** if you play games through the proxy) first, so you have a backup.
