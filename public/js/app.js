@@ -199,6 +199,12 @@ function onKey(e) {
     openTab("silicon://history");
     return;
   }
+  // Address bar and reload, like Chrome: Ctrl+L and Ctrl+R (Ctrl on a Mac too). Shift+R is left alone so a hard refresh of Silicon still works.
+  if (!e.altKey && !e.shiftKey && (e.ctrlKey !== e.metaKey) && (e.key.toLowerCase() === "l" || e.key.toLowerCase() === "r")) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (e.key.toLowerCase() === "l") { address.focus(); address.select(); } else reloadActive();
+    return;
+  }
   // Find in page: Ctrl+F (Cmd+F on a Mac)
   if (!e.altKey && !e.shiftKey && (e.ctrlKey !== e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); e.stopImmediatePropagation(); openFind(); return; }
   // Tabs. On Windows and Linux, browsers keep Ctrl+T, W, Tab and 1-9 for themselves, so those only reach Silicon when the
@@ -361,6 +367,8 @@ function showShortcuts() {
       ["Go to the last tab", ["Ctrl+9", "Alt+9"]],
     ]],
     ["Pages", [
+      ["Go to the address bar", ["Ctrl+L"]],
+      ["Reload the page", ["Ctrl+R"]],
       ["Find in page", ["Ctrl+F"]],
       ["Bookmark this page", ["Ctrl+D"]],
       ["Bookmarks", ["Ctrl+Shift+O"]],
@@ -900,13 +908,17 @@ address.addEventListener("focus", () => address.select());
 const win = () => tabs.get(active)?.iframe.contentWindow;
 $("back").onclick = () => win()?.history.back();
 $("forward").onclick = () => win()?.history.forward();
-$("reload").onclick = () => {
+function reloadActive() {
   const tab = tabs.get(active);
-  if (tab.loading) { try { win()?.stop(); } catch {} setLoading(tab, false); return; }
   const b = $("reload").firstElementChild;
   b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
   setLoading(tab, true);
   win()?.location.reload();
+}
+$("reload").onclick = () => { // while a page is loading, this button stops it instead
+  const tab = tabs.get(active);
+  if (tab.loading) { try { win()?.stop(); } catch {} setLoading(tab, false); return; }
+  reloadActive();
 };
 $("home-btn").onclick = () => navigate(tabs.get(active), "silicon://newtab");
 $("bookmark-btn").onclick = toggleBookmark;

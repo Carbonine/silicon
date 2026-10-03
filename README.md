@@ -49,7 +49,7 @@ Source code: <https://github.com/Carbonine/silicon>
 **Browsing**
 - Tabs you can drag to reorder, duplicate, close in bulk and reopen (up to the last 10 closed), with a right-click menu and middle-click to close. Tabs are not saved between sessions.
 - An address bar that suggests bookmarks, history and `silicon://` pages as you type. It matches only on your device, and nothing you type is sent to a search engine until you press Enter.
-- Back, forward, reload and home, a loading bar, and each tab shows the page's own icon.
+- Back, forward, reload and home (Ctrl+L jumps to the address bar and Ctrl+R reloads), a loading bar, and each tab shows the page's own icon.
 - Find in page (Ctrl+F), with a match count, next and previous, and highlighted matches. It works on proxied sites and on Silicon's own pages, and doesn't change the page.
 - A choice of search engines: DuckDuckGo, Google, Bing, Brave, Startpage, Ecosia, Wikipedia, Yandex, or your own.
 - Dark, light or system theme.
@@ -194,6 +194,7 @@ The three-dots menu has the full list. The main ones:
 | Reopen closed tab | Ctrl+Shift+T (or Alt+Shift+T) |
 | Next / previous tab | Ctrl+Tab, Ctrl+Shift+Tab (or Alt+], Alt+[) |
 | Go to tab 1 to 8 / last tab | Ctrl+1 to 8, Ctrl+9 (or Alt+1 to 9) |
+| Go to the address bar / reload | Ctrl+L / Ctrl+R |
 | Find in page | Ctrl+F |
 | Bookmark this page | Ctrl+D |
 | Bookmarks / bookmarks bar | Ctrl+Shift+O / Ctrl+Shift+B |
