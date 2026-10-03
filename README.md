@@ -23,6 +23,7 @@ Source code: <https://github.com/Carbonine/silicon>
 - [Features](#features)
 - [Quick start](#quick-start)
 - [Running it on a server (VPS)](#running-it-on-a-server-vps)
+- [Updating](#updating)
 - [Configuration](#configuration)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Game sources](#game-sources)
@@ -93,8 +94,6 @@ Then open <http://localhost:3000>.
 - No API keys or cloud accounts are needed.
 - It listens on `127.0.0.1` by default, so only your own machine can reach it. This is the recommended way to run Silicon.
 
-**Updating:** run `git pull` and then `npm install` in the folder, and restart the server.
-
 ## Running it on a server (VPS)
 
 Do the same thing on the server, then expose it safely:
@@ -137,6 +136,27 @@ HOST=127.0.0.1 PORT=3000 NODE_ENV=production node server/index.js
 3. **Limit who can use it.** Silicon has no login. Anyone who can reach it can send traffic out through your server's connection. Restrict access with your firewall, a VPN, or basic authentication in your reverse proxy (for example Caddy's `basic_auth`).
 
 Some things to know: many datacenter IP addresses are blocked or challenged by large sites, and the Wisp server refuses loopback and private addresses by default, so the proxy can't be used to reach other services on your server.
+
+## Updating
+
+Silicon doesn't update itself, and it never contacts GitHub to check. Each version is listed in the [changelog](CHANGELOG.md) and under the repository's Releases.
+
+1. **Read the [changelog](CHANGELOG.md)** for the versions you're skipping. Anything you have to do, such as a new setting or a change to saved data, is noted there.
+2. **Optional but sensible:** in Settings → Data, press **Export data** (and **Export game saves** if you play games through the proxy) first, so you have a backup.
+3. **Get the new code,** from the Silicon folder:
+
+   ```sh
+   git pull
+   npm install
+   ```
+
+   `npm install` only matters when the dependencies changed, but it's safe to run every time. If git complains about local changes, commit or stash them first.
+4. **Restart the server.** If you started it with `npm run dev`, it restarts by itself when files change. With `npm start`, stop it and start it again. On a VPS, restart the service, for example `sudo systemctl restart silicon`.
+5. **Reload Silicon in your browser.** A hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) makes sure the browser isn't using old files.
+
+Your settings, bookmarks, history, favorites and game saves are kept in your browser, not in the Silicon folder, so updating doesn't touch them. Your `.env` file is yours and isn't overwritten either; compare it with `.env.example` after an update in case a new option was added.
+
+If you downloaded a zip instead of cloning, download the new version, copy your `.env` over if you made one, run `npm install`, and start it. Cloning with git is the easier way to stay up to date.
 
 ## Configuration
 
@@ -231,6 +251,7 @@ public/silicon/          silicon:// pages (newtab, games, play, bookmarks, histo
 public/css/              theme.css (colors/fonts), style.css (shell), pages.css (pages)
 public/games/            Games hosted by this server
 docs/screenshots/        The screenshots shown above
+CHANGELOG.md             What changed in each version
 ```
 
 To add an internal page, create `public/silicon/NAME.html` with `data-silicon="NAME"` on `<html>` and add `NAME` to `INTERNAL` in `public/js/app.js`.
@@ -242,6 +263,7 @@ Bug reports, ideas and pull requests are welcome. Please open an issue first for
 - **Reporting a problem:** say what you did, what you expected, and what happened, plus your browser and whether you run Silicon on `localhost` or a server. For a game that won't load, try the shield button in the player first: if it fails both through the proxy and loaded directly, it's the game's source, not Silicon (see [Game sources](#game-sources)).
 - **Changing the code:** fork the repository, make a branch, and open a pull request. Silicon is plain HTML, CSS and JavaScript with no build step and no frontend framework, so please keep it that way and match the style of the code around your change. Test by hand in a browser: run it with `npm run dev`, and try your change on both the dark and light themes. Please don't add a dependency without talking about it first.
 - **Adding a game source:** write an adapter in `server/games.js` and register it in `SOURCES` (see [Game sources](#game-sources)). Sources are read live and kept in memory, never copied into the repository.
+- **The changelog:** if your change is something users would notice, add a line to `CHANGELOG.md` under "Unreleased".
 - **Licensing:** by contributing you agree that your work is released under the same AGPL-3.0 license as the rest of Silicon.
 
 ## Security
