@@ -10,6 +10,7 @@ Silicon is in beta, so things can change between versions.
 
 ### Added
 - Find in page (Ctrl+F, Ctrl on a Mac too): a small bar with a match count, next and previous (Enter and Shift+Enter) and Esc to close. It highlights matches without changing the page, works on proxied sites and on Silicon's own pages, ignores upper and lower case, and starts from the text you have selected.
+- Alt+Left and Alt+Right go back and forward (Option on a Mac). They are ignored while you type in a text field, where they move the cursor by a word.
 - Ctrl+L focuses the address bar and Ctrl+R reloads the page (Ctrl on a Mac too). Ctrl+Shift+R still hard-refreshes Silicon itself.
 
 ### Changed

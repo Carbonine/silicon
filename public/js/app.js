@@ -209,6 +209,11 @@ function onKey(e) {
   if (!e.altKey && !e.shiftKey && (e.ctrlKey !== e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); e.stopImmediatePropagation(); openFind(); return; }
   // Tabs. On Windows and Linux, browsers keep Ctrl+T, W, Tab and 1-9 for themselves, so those only reach Silicon when the
   // browser lets them through (Ctrl is free on a Mac); the Alt versions work everywhere.
+  // Back and forward: Alt+Left and Alt+Right (Option on a Mac). Not while typing in a field, where they move the cursor by a word.
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+    const t = e.target;
+    if (!(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) { e.preventDefault(); e.stopImmediatePropagation(); $(e.key === "ArrowLeft" ? "back" : "forward").click(); return; }
+  }
   if (tabShortcut(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // Show / hide the bookmarks bar, like Chrome: Ctrl+Shift+B
   if (e.shiftKey && !e.altKey && (e.ctrlKey !== e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); e.stopImmediatePropagation(); updateSettings({ showBookmarksBar: !settings.showBookmarksBar }); return; }
@@ -367,6 +372,7 @@ function showShortcuts() {
       ["Go to the last tab", ["Ctrl+9", "Alt+9"]],
     ]],
     ["Pages", [
+      ["Back and forward", ["Alt+Left", "Alt+Right"]],
       ["Go to the address bar", ["Ctrl+L"]],
       ["Reload the page", ["Ctrl+R"]],
       ["Find in page", ["Ctrl+F"]],

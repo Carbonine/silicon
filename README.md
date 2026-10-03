@@ -194,6 +194,7 @@ The three-dots menu has the full list. The main ones:
 | Reopen closed tab | Ctrl+Shift+T (or Alt+Shift+T) |
 | Next / previous tab | Ctrl+Tab, Ctrl+Shift+Tab (or Alt+], Alt+[) |
 | Go to tab 1 to 8 / last tab | Ctrl+1 to 8, Ctrl+9 (or Alt+1 to 9) |
+| Back / forward | Alt+Left / Alt+Right |
 | Go to the address bar / reload | Ctrl+L / Ctrl+R |
 | Find in page | Ctrl+F |
 | Bookmark this page | Ctrl+D |
