@@ -14,6 +14,10 @@ Silicon is in beta, so things can change between versions.
 - Alt+Left and Alt+Right go back and forward (Option on a Mac). They are ignored while you type in a text field, where they move the cursor by a word.
 - Ctrl+L focuses the address bar and Ctrl+R reloads the page (Ctrl on a Mac too). Ctrl+Shift+R still hard-refreshes Silicon itself.
 
+### Fixed
+- Links that open in a new tab (`target="_blank"`) and pages that call `window.open()` now open a new Silicon tab next to the current one. Before, they opened a whole new browser window with another copy of Silicon, or did nothing.
+- Typing an unknown `silicon://` address now puts the current page's address back in the address bar instead of leaving what you typed.
+
 ### Changed
 - The version is now v0.2 beta.
 

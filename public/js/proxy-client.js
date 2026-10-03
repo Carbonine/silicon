@@ -74,7 +74,7 @@ export async function setTransport(settings) {
   if (controller) controller.setTransport(await buildTransport(settings));
 }
 
-export function createFrame(iframe, onUrl, onWindow, { fixHtml = false } = {}) {
+export function createFrame(iframe, onUrl, onWindow, { fixHtml = false, onOpen } = {}) {
   const u = $scramjetUtils;
   const plugins = [
     new u.HttpCachePlugin(),
@@ -90,6 +90,38 @@ export function createFrame(iframe, onUrl, onWindow, { fixHtml = false } = {}) {
       install(frame) { this.tap(frame.hooks.init.pre, (ctx) => onWindow(ctx.window)); }
     }
     plugins.push(new WindowHook());
+  }
+  if (onOpen) {
+    // target=_blank links and window.open() would otherwise open a whole new browser window with another
+    // copy of Silicon (see CatchEscapedLinksPlugin above, which stays as the fallback). Open a tab instead.
+    class OpenInTab extends u.ManagedPlugin {
+      constructor() { super("silicon-open-in-tab", []); }
+      install(frame) {
+        this.tap(frame.hooks.init.post, (ctx) => {
+          const win = ctx.window;
+          const abs = (v) => { try { return new URL(String(v), ctx.client.url.href).href; } catch { return null; } };
+          try {
+            win.addEventListener("click", (e) => {
+              if (e.defaultPrevented || e.button !== 0) return;
+              const a = e.target?.closest?.("a[href], area[href]");
+              const t = (a?.getAttribute("target") || "").toLowerCase();
+              if (!a || !t || t === "_self" || t === "_top" || t === "_parent") return;
+              const url = abs(a.href);
+              if (!/^https?:/i.test(url || "")) return;
+              e.preventDefault(); e.stopImmediatePropagation();
+              onOpen(url);
+            }, true);
+          } catch {}
+          const open = win.open;
+          win.open = function (url, ...rest) {
+            const full = url == null || url === "" ? null : abs(url);
+            if (full && /^https?:/i.test(full)) { onOpen(full); return null; }
+            return Reflect.apply(open, this, [url, ...rest]);
+          };
+        });
+      }
+    }
+    plugins.push(new OpenInTab());
   }
   if (fixHtml) {
     // Some game hosts (GN-Math) serve their .html pages as text/plain, which a browser would show as text.

@@ -693,14 +693,14 @@ async function navigate(tab, input) {
   if (url.startsWith("silicon://")) {
     const m = url.match(/^silicon:\/\/([^/?#]+)\/?([?#].*)?$/);
     const name = m?.[1].toLowerCase();
-    if (!name || !INTERNAL.has(name)) return flash(`Unknown page: ${url}`);
+    if (!name || !INTERNAL.has(name)) { flash(`Unknown page: ${url}`); showAddress(tab); return; }
     tab.iframe.classList.remove("pending");
     tab.iframe.src = "/silicon/" + name + (m[2] || ""); // instant: no loading state
     return;
   }
   try { await boot(); } catch (err) { return flash(err.message); }
   tab.frame ||= (() => {
-    return createFrame(tab.iframe, (url) => { tab.url = url; showAddress(tab); }, attachKeys);
+    return createFrame(tab.iframe, (url) => { tab.url = url; showAddress(tab); }, attachKeys, { onOpen: (url) => openTab(url, tabOrder().indexOf(tab.id) + 1) });
   })();
   tab.url = url;
   setLabel(tab, hostOf(url));
