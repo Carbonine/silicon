@@ -6,7 +6,7 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
-## Unreleased (v0.2 beta)
+## v0.2 beta (2026-10-04)
 
 ### Added
 - Find in page (Ctrl+F, Ctrl on a Mac too): a small bar with a match count, next and previous (Enter and Shift+Enter) and Esc to close. It highlights matches without changing the page, works on proxied sites and on Silicon's own pages, ignores upper and lower case, and starts from the text you have selected.
@@ -22,6 +22,7 @@ Silicon is in beta, so things can change between versions.
 
 ### Changed
 - The version is now v0.2 beta.
+- The README's server (VPS) guide is rewritten as step-by-step instructions: creating a service user, a systemd service, an SSH tunnel for private use, Caddy with HTTPS and a password, and notes on blocked datacenter addresses. Troubleshooting also covers shortcuts and downloads.
 
 ## v0.1 beta (2026-10-02)
 

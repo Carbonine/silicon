@@ -8,7 +8,7 @@ A self-hosted browser-in-a-tab and games launcher. You run it on your own comput
 
 Source code: <https://github.com/Carbonine/silicon>
 
-> **Experimental (v0.1 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
+> **Experimental (v0.2 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
 
 | | |
 | --- | --- |
@@ -49,7 +49,8 @@ Source code: <https://github.com/Carbonine/silicon>
 **Browsing**
 - Tabs you can drag to reorder, duplicate, close in bulk and reopen (up to the last 10 closed), with a right-click menu and middle-click to close. Tabs are not saved between sessions.
 - An address bar that suggests bookmarks, history and `silicon://` pages as you type. It matches only on your device, and nothing you type is sent to a search engine until you press Enter.
-- Back, forward, reload and home (Ctrl+L jumps to the address bar and Ctrl+R reloads), a loading bar, and each tab shows the page's own icon.
+- Back, forward, reload and home, a loading bar, and each tab shows the page's own icon. Back and forward grey out when there's nowhere to go, and Alt+Left and Alt+Right work too. Ctrl+L jumps to the address bar and Ctrl+R reloads.
+- Links that open in a new tab, and pages that open a popup, open as a new Silicon tab next to the current one. Downloads work too.
 - Zoom (Ctrl++, Ctrl+- and Ctrl+0), remembered for each site, with the zoom level shown in the address bar. All `silicon://` pages share one level.
 - Find in page (Ctrl+F), with a match count, next and previous, and highlighted matches. It works on proxied sites and on Silicon's own pages, and doesn't change the page.
 - A choice of search engines: DuckDuckGo, Google, Bing, Brave, Startpage, Ecosia, Wikipedia, Yandex, or your own.
@@ -99,46 +100,97 @@ Then open <http://localhost:3000>.
 
 ## Running it on a server (VPS)
 
-Do the same thing on the server, then expose it safely:
+Run Silicon on a server you rent (a VPS) when you want to use it from other devices, or want sites to see the server's connection instead of yours. These steps are for Debian or Ubuntu. Other systems work the same way, with different install commands.
+
+**Before you start, know this:** Silicon has no login. Anyone who can reach it can send traffic out through your server. So the steps below keep it private first and open to other devices second. Use a long-running service, HTTPS and a password, as in steps 3 to 5.
+
+### 1. Install Node.js and git
+
+You need Node.js 18 or newer. The version in the system's package list is often older, so check:
 
 ```sh
-git clone https://github.com/Carbonine/silicon.git silicon
-cd silicon
-npm install --omit=dev
-HOST=127.0.0.1 PORT=3000 NODE_ENV=production node server/index.js
+node --version
 ```
 
-1. **Keep it running.** Use systemd, pm2 or similar. A minimal systemd unit:
+If it's older than 18 (or missing), install a current one from [nodejs.org](https://nodejs.org/en/download) or with your system's package manager, then install git:
 
-   ```ini
-   [Unit]
-   Description=Silicon
-   After=network.target
+```sh
+sudo apt install -y git
+```
 
-   [Service]
-   WorkingDirectory=/opt/silicon
-   Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000
-   ExecStart=/usr/bin/node server/index.js
-   Restart=on-failure
-   User=silicon
+### 2. Get Silicon
 
-   [Install]
-   WantedBy=multi-user.target
-   ```
+This puts it in `/opt/silicon` and creates a separate user to run it, so a problem in Silicon can't touch the rest of your server:
 
-2. **Put HTTPS in front of it.** Service workers only run on `http://localhost` or over HTTPS, so Silicon will not work on a plain `http://your-server` address. A Caddy example (it handles HTTPS and WebSockets for you):
+```sh
+sudo useradd --system --home /opt/silicon --shell /usr/sbin/nologin silicon
+sudo git clone https://github.com/Carbonine/silicon.git /opt/silicon
+sudo chown -R silicon:silicon /opt/silicon
+sudo -u silicon sh -c 'cd /opt/silicon && npm install --omit=dev'
+```
 
-   ```
-   silicon.example.com {
-       reverse_proxy 127.0.0.1:3000
-   }
-   ```
+To run a released version and not the newest code, see [Updating](#updating) first.
 
-   With nginx, forward WebSocket upgrades (`proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`) for the whole site, including `/wisp/`.
+### 3. Run it as a service
 
-3. **Limit who can use it.** Silicon has no login. Anyone who can reach it can send traffic out through your server's connection. Restrict access with your firewall, a VPN, or basic authentication in your reverse proxy (for example Caddy's `basic_auth`).
+A service starts Silicon on boot and restarts it if it stops. Create `/etc/systemd/system/silicon.service` (for example with `sudo nano /etc/systemd/system/silicon.service`) containing:
 
-Some things to know: many datacenter IP addresses are blocked or challenged by large sites, and the Wisp server refuses loopback and private addresses by default, so the proxy can't be used to reach other services on your server.
+```ini
+[Unit]
+Description=Silicon
+After=network.target
+
+[Service]
+User=silicon
+WorkingDirectory=/opt/silicon
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+If `which node` prints a different path than `/usr/bin/node`, use that path in `ExecStart`. Then start it:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now silicon
+sudo systemctl status silicon
+```
+
+`HOST=127.0.0.1` means only the server itself can reach Silicon for now. That's intentional: steps 4 and 5 are how other devices get in safely. Logs are available with `journalctl -u silicon -f`.
+
+### 4. Reach it
+
+Pick one:
+
+- **Just you, no domain needed: an SSH tunnel.** On your own computer run `ssh -L 3000:127.0.0.1:3000 you@your-server`, leave it open, and visit `http://localhost:3000`. Nothing is exposed to the internet, and `localhost` counts as secure, so the proxy works. This is the simplest and safest option.
+- **From any device: a domain with HTTPS.** Silicon's proxy only runs on `localhost` or over HTTPS, so a plain `http://your-server` address won't work. Point a domain's DNS record at the server, open ports 80 and 443 in its firewall, and use a reverse proxy. Caddy is the easiest because it gets the HTTPS certificate for you and passes WebSockets through (see [Caddy's install guide](https://caddyserver.com/docs/install)). Put this in `/etc/caddy/Caddyfile`:
+
+  ```
+  silicon.example.com {
+      basic_auth {
+          yourname PASTE_HASH_HERE
+      }
+      reverse_proxy 127.0.0.1:3000
+  }
+  ```
+
+  Replace `silicon.example.com` with your domain and `yourname` with the username you want. Make the password hash with `caddy hash-password` (it asks for the password), paste the result in place of `PASTE_HASH_HERE`, then run `sudo systemctl reload caddy`.
+
+  With nginx instead, you must pass WebSocket upgrades through for the whole site, including `/wisp/`: `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`.
+
+### 5. Keep other people out
+
+The `basic_auth` block above is what keeps strangers from using your server. Don't skip it if the address is public. Alternatives are a VPN such as Tailscale or WireGuard, or firewall rules that only allow your own addresses. Never set `HOST=0.0.0.0` on a public server without one of these.
+
+### Good to know
+
+- **Blocked IP addresses.** Large sites often block or challenge datacenter addresses, and a VPS's address is one. If sites won't load, or ask you to prove you're human, that's usually why. Settings has an option to send traffic through a SOCKS5 or HTTP proxy of your own (libcurl transport only), which can help.
+- **Private addresses are refused.** The Wisp server won't connect to loopback or private addresses, so the proxy can't be used to reach other services on your server or its network.
+- **Updating.** See [Updating](#updating). On a server, the last step is `sudo systemctl restart silicon`.
+- **Port in use.** If another program uses port 3000, change `PORT` in the service file (and in the Caddy address) and restart.
 
 ## Updating
 
@@ -165,7 +217,7 @@ Silicon doesn't update itself, and it never contacts GitHub to check. Each versi
    ```
 
    `npm install` only matters when the dependencies changed, but it's safe to run every time. If git complains about local changes, commit or stash them first.
-4. **Restart the server.** If you started it with `npm run dev`, it restarts by itself when files change. With `npm start`, stop it and start it again. On a VPS, restart the service, for example `sudo systemctl restart silicon`.
+4. **Restart the server.** If you started it with `npm run dev`, it restarts by itself when files change. With `npm start`, stop it and start it again. On a VPS, run the git commands as the `silicon` user (for example `sudo -u silicon git -C /opt/silicon fetch --tags`, then the same with `checkout` and `sudo -u silicon sh -c 'cd /opt/silicon && npm install --omit=dev'`), then restart the service with `sudo systemctl restart silicon`.
 5. **Reload Silicon in your browser.** A hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) makes sure the browser isn't using old files.
 
 Your settings, bookmarks, history, favorites and game saves are kept in your browser, not in the Silicon folder, so updating doesn't touch them. Your `.env` file is yours and isn't overwritten either; compare it with `.env.example` after an update in case a new option was added.
@@ -233,6 +285,8 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 - **Other devices on my network can't reach it.** The default `HOST=127.0.0.1` only allows this machine. Set `HOST=0.0.0.0`, and remember the proxy then works for everyone who can reach it. Service workers still need HTTPS on any address that isn't `localhost`.
 - **"Address already in use".** Another program is on that port. Set a different `PORT`.
 - **A game source is empty.** Its site may be down or blocked from your server. The other sources keep working, and it is fetched again at the next refresh.
+- **A keyboard shortcut does nothing.** Your browser may be using it before Silicon sees it, most often Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+L or Ctrl+R on Windows and Linux. Use the Alt versions of the tab shortcuts, or the buttons on screen. The full list is in the three-dots menu.
+- **A download doesn't start.** Downloads from proxied sites are saved by your browser, so check its downloads list and any download blocking. A very large file from a `download` link can fail (see [Known limitations](#known-limitations)).
 - **I lost my bookmarks or settings.** They live in your browser's site data. Clearing it removes them, so use Settings → Export data for a backup.
 
 ## Known limitations
@@ -244,7 +298,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
 - Silicon is not a full replacement for a browser: no extensions and no downloads manager. Downloads work, but a file from a `download` link is held in memory before it's saved, so very large files can fail.
 - Find in page only matches text that is visible and unbroken. Text hidden on the page isn't searched, and a phrase split across formatting tags (for example `he<b>llo</b>`) isn't found.
-- Only tested in recent Chromium-based browsers.
+- Only tested in recent Chromium-based browsers. Some browsers keep a few shortcuts (Ctrl+L, Ctrl+R, Ctrl++ and Ctrl+-, for example) for themselves, so they may not reach Silicon. The Alt versions of the tab shortcuts always work.
 - Icons on the new tab shortcuts are found and fetched by your server from the site itself (and cached in memory for a few hours). Some sites have no icon the server can reach, and then the tile shows a globe. Tab cloak icons are loaded by your browser from the sites themselves, and the custom cloak needs an icon address you provide.
 
 ## How it works
@@ -271,6 +325,7 @@ public/css/              theme.css (colors/fonts), style.css (shell), pages.css 
 public/games/            Games hosted by this server
 docs/screenshots/        The screenshots shown above
 CHANGELOG.md             What changed in each version
+ROADMAP.md               Features planned for later
 ```
 
 To add an internal page, create `public/silicon/NAME.html` with `data-silicon="NAME"` on `<html>` and add `NAME` to `INTERNAL` in `public/js/app.js`.
