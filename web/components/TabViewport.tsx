@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useTabs } from "@/context/TabContext";
+import { useZoom } from "@/hooks/useZoom";
 import { bootEngine } from "@/lib/engine";
 import { tabFrames } from "@/lib/frames";
 import { attachWindow } from "@/lib/keys";
@@ -40,6 +41,7 @@ function TabFrame({ tab }: { tab: Tab }) {
   const loadedNonce = useRef(0);
   const urlRef = useRef(tab.url);
   urlRef.current = tab.url;
+  const [zoom] = useZoom(tab.url);
 
   // This tab's own history. The browser's can't be used: all frames share one timeline, so going back in one
   // tab rewinds every other tab to that moment, which would reload a game running in the background.
@@ -86,7 +88,8 @@ function TabFrame({ tab }: { tab: Tab }) {
       updateTab(tab.id, { url, isLoading: true });
       void load(url);
     };
-    tabFrames.set(tab.id, { iframe: iframe.current!, traverse });
+    const reload = () => { updateTab(tab.id, { isLoading: true }); iframe.current?.contentWindow?.location.reload(); };
+    tabFrames.set(tab.id, { iframe: iframe.current!, traverse, reload });
     return () => { tabFrames.delete(tab.id); };
   }, [load, publishHistory, tab.id, updateTab]);
 
@@ -98,6 +101,12 @@ function TabFrame({ tab }: { tab: Tab }) {
     record(tab.nav.target);
     void load(tab.nav.target);
   }, [load, record, tab.nav.nonce, tab.nav.target]);
+
+  useEffect(() => { // never spin forever
+    if (!tab.isLoading) return;
+    const timer = setTimeout(() => updateTab(tab.id, { isLoading: false }), 30000);
+    return () => clearTimeout(timer);
+  }, [tab.id, tab.isLoading, updateTab]);
 
   const onLoad = () => {
     const win = iframe.current?.contentWindow;
@@ -114,19 +123,27 @@ function TabFrame({ tab }: { tab: Tab }) {
     } else {
       const err = proxyErrorText(doc);
       if (err !== null) { showError(err); return; }
-      updateTab(tab.id, { isLoading: false, glyph: null, favicon: pageIcon(doc), title: doc.title || hostOf(urlRef.current) });
+      const icon = pageIcon(doc);
+      updateTab(tab.id, { isLoading: false, glyph: null, favicon: icon, title: doc.title || hostOf(urlRef.current) });
       recordVisit(urlRef.current, doc.title);
+      setTimeout(() => { // icons set by scripts
+        if (iframe.current?.contentDocument !== doc) return;
+        const later = pageIcon(doc);
+        if (later && later !== icon) updateTab(tab.id, { favicon: later });
+      }, 2000);
     }
     history.current.sameLoad = false;
   };
 
   // `hidden` is display:none: the frame stays in the document, so its page keeps its state in the background.
-  return <iframe ref={iframe} title={tab.title} onLoad={onLoad} className={`h-full w-full border-0 bg-bg ${tab.isActive ? "block" : "hidden"}`} />;
+  // Zooming scales the frame and resizes it to match, so the page lays out as it would at that zoom and isn't touched.
+  const zoomed = zoom === 1 ? undefined : { transformOrigin: "0 0", transform: `scale(${zoom})`, width: `${100 / zoom}%`, height: `${100 / zoom}%` };
+  return <iframe ref={iframe} title={tab.title} onLoad={onLoad} style={zoomed} className={`h-full w-full border-0 bg-bg ${tab.isActive ? "block" : "hidden"}`} />;
 }
 
 export function TabViewport() {
   const { tabs } = useTabs();
   // Sorted by creation order, not strip order: moving an iframe in the DOM reloads it, which would end a game.
   const stable = [...tabs].sort((a, b) => a.seq - b.seq);
-  return <main className="relative min-h-0 flex-1 bg-bg">{stable.map((tab) => <TabFrame key={tab.id} tab={tab} />)}</main>;
+  return <main id="stage" className="overflow-hidden">{stable.map((tab) => <TabFrame key={tab.id} tab={tab} />)}</main>;
 }

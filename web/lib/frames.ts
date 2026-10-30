@@ -2,6 +2,7 @@
 export interface TabHandle {
   iframe: HTMLIFrameElement;
   traverse(delta: -1 | 1): void;
+  reload(): void;
 }
 export const tabFrames = new Map<string, TabHandle>();
 

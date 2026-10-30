@@ -23,6 +23,10 @@ export interface SiliconGame {
   url?: string;
   path?: string;
   thumb?: string;
+  category?: string;
+  alt?: string[];
+  warnings?: string[];
+  added?: number;
   kind?: string;
   mode?: string;
   byline?: string;
@@ -65,6 +69,8 @@ export interface ShellBridge {
   createGameFrame(iframe: HTMLIFrameElement): Promise<ScramjetFrame>;
   openCover(kind: "blank" | "blob"): boolean;
   setCapture(on: boolean): void;
+  reload(): void;
+  applyTransport(): Promise<void>;
 }
 
 declare global {

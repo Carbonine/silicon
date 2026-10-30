@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePageClass } from "@/hooks/usePageClass";
 import { KEYS, loadSettings, readJson, writeJson } from "@/lib/storage";
 import { goTo, shell } from "@/lib/shell";
 import type { ScramjetFrame, SiliconGame } from "@/lib/types";
@@ -8,6 +9,7 @@ import type { ScramjetFrame, SiliconGame } from "@/lib/types";
 const barButton = "grid size-9 place-items-center rounded-full text-icon hover:bg-hover";
 
 export function GamePlayer({ id }: { id: string }) {
+  usePageClass("play-page");
   const [game, setGame] = useState<SiliconGame | null>(null);
   const [sourceLabel, setSourceLabel] = useState("");
   const [problem, setProblem] = useState("");
@@ -15,6 +17,7 @@ export function GamePlayer({ id }: { id: string }) {
   const [isFav, setIsFav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reloads, setReloads] = useState(0);
+  const [slow, setSlow] = useState(false);
   const iframe = useRef<HTMLIFrameElement>(null);
   const proxied = useRef<ScramjetFrame | null>(null);
 
@@ -54,6 +57,8 @@ export function GamePlayer({ id }: { id: string }) {
     if (!game || external || viaProxy === null || !el) return;
     let stopped = false;
     setLoading(true);
+    setSlow(false);
+    const timer = setTimeout(() => setSlow(true), 9000);
     (async () => {
       el.src = "about:blank";
       if (!viaProxy) { el.src = game.kind === "html-text" ? `/api/games/play/${encodeURIComponent(game.id)}` : src; return; }
@@ -64,7 +69,7 @@ export function GamePlayer({ id }: { id: string }) {
         if (!stopped) proxied.current.go(src);
       } catch (err) { setProblem(`Couldn't start the proxy: ${err instanceof Error ? err.message : err}`); }
     })();
-    return () => { stopped = true; };
+    return () => { stopped = true; clearTimeout(timer); };
   }, [external, game, reloads, src, viaProxy]);
 
   const toggleFav = () => {
@@ -93,7 +98,12 @@ export function GamePlayer({ id }: { id: string }) {
           : external ? <div className="p-8 text-center"><p className="mb-4 text-muted">This one runs on its own site and can't be shown inside Silicon.</p><button onClick={() => window.open(src, "_blank", "noopener")} className="rounded-full bg-accent px-5 py-2 text-sm text-on-accent">Open {game?.title}</button></div>
           : <>
             <iframe ref={iframe} title={game?.title ?? "Game"} allow="fullscreen; gamepad; autoplay; clipboard-write; accelerometer; gyroscope" onLoad={(e) => { if (e.currentTarget.contentDocument?.documentURI !== "about:blank") setLoading(false); }} className="size-full border-0" />
-            {loading && <p className="absolute inset-0 grid place-items-center bg-bg text-muted">Loading{game ? ` ${game.title}` : ""}…</p>}
+            {loading && (
+              <div className="absolute inset-0 grid place-content-center gap-2 bg-bg text-center text-muted">
+                <p>Loading{game ? ` ${game.title}` : ""}…</p>
+                {slow && <p className="text-sm">Still loading. Bigger games take a while. {remote && <button className="text-accent underline" onClick={flip}>{viaProxy ? "Try loading directly" : "Try the proxy"}</button>}</p>}
+              </div>
+            )}
           </>}
       </main>
     </div>

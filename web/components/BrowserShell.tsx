@@ -1,102 +1,251 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent, type MouseEvent, type RefObject } from "react";
+import { BookmarkBar } from "./BookmarkBar";
+import { BookmarkEditDialog } from "./BookmarkEditDialog";
+import { FindBar, type FindHandle } from "./FindBar";
+import { Menu, type MenuState } from "./Menu";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { TabViewport } from "./TabViewport";
 import { NEW_TAB_URL, useTabs } from "@/context/TabContext";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { useSettings } from "@/hooks/useSettings";
+import { useShortcuts, type ShortcutActions } from "@/hooks/useShortcuts";
 import { openCover, useStealth } from "@/hooks/useStealth";
+import { useZoom } from "@/hooks/useZoom";
+import { sameUrl, type Bookmark } from "@/lib/bookmarks";
 import { bootEngine, updateTransport } from "@/lib/engine";
 import { tabFrames, tabIdOfWindow } from "@/lib/frames";
 import { attachWindow, setKeyCapture } from "@/lib/keys";
-import { internalToRoute, toUrl } from "@/lib/protocol";
+import { hostOf, internalToRoute, toUrl } from "@/lib/protocol";
 import { loadSettings } from "@/lib/storage";
+import { buildSuggestions, type Suggestion } from "@/lib/suggest";
 import type { Tab } from "@/lib/types";
+import { zoomStep } from "@/lib/zoom";
 
-const iconButton = "grid size-8 shrink-0 place-items-center rounded-full text-icon hover:bg-hover disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent";
+const isWeb = (url: string | undefined) => /^https?:\/\//i.test(url ?? "");
 
-function TabButton({ tab, index, dragFrom }: { tab: Tab; index: number; dragFrom: React.RefObject<number | null> }) {
-  const { closeTab, reorderTabs, setActiveTab } = useTabs();
+// The tab's favicon as a small data URL, so a bookmark's icon needs nothing looked up later.
+function tabIconData(id: string): string | undefined {
+  try {
+    const img = document.querySelector<HTMLImageElement>(`[data-id="${id}"] img.fav`);
+    if (!img?.complete || !img.naturalWidth) return undefined;
+    const c = document.createElement("canvas");
+    c.width = c.height = 32;
+    c.getContext("2d")!.drawImage(img, 0, 0, 32, 32);
+    return c.toDataURL("image/png");
+  } catch { return undefined; }
+}
+
+function TabButton({ tab, index, dragFrom, showMenu, onReload, flash }: { tab: Tab; index: number; dragFrom: RefObject<number | null>; showMenu(m: MenuState): void; onReload(id: string): void; flash(m: string): void }) {
+  const { tabs, closeTab, closeOtherTabs, closeTabsToRight, duplicateTab, hasClosedTabs, openTab, reopenClosedTab, reorderTabs, setActiveTab, updateTab } = useTabs();
+
+  const context = (e: MouseEvent) => {
+    e.preventDefault();
+    showMenu({ at: { x: e.clientX, y: e.clientY }, items: [
+      { icon: "add", label: "New tab", run: () => openTab(NEW_TAB_URL, undefined, index + 1) },
+      { icon: "refresh", label: "Reload", run: () => { setActiveTab(tab.id); onReload(tab.id); } },
+      { icon: "content_copy", label: "Duplicate", run: () => duplicateTab(tab.id) },
+      ...(hasClosedTabs() ? ["-" as const, { icon: "history", label: "Reopen closed tab", hint: "Ctrl+Shift+T", run: () => { if (!reopenClosedTab()) flash("No recently closed tabs"); } }] : []),
+      "-",
+      { icon: "close", label: "Close", run: () => closeTab(tab.id) },
+      ...(tabs.length > 1 ? [{ icon: "tab_close_right", label: "Close other tabs", run: () => closeOtherTabs(tab.id) }] : []),
+      ...(index < tabs.length - 1 ? [{ icon: "arrow_forward", label: "Close tabs to the right", run: () => closeTabsToRight(tab.id) }] : []),
+    ] });
+  };
+  // The dragged tab moves along the strip as the pointer passes the middle of the others.
+  const dragOver = (e: DragEvent<HTMLElement>) => {
+    if (dragFrom.current === null) return;
+    e.preventDefault();
+    const r = e.currentTarget.getBoundingClientRect(), before = e.clientX < r.left + r.width / 2;
+    const to = dragFrom.current < index ? (before ? index - 1 : index) : before ? index : index + 1;
+    if (to !== dragFrom.current) { reorderTabs(dragFrom.current, to); dragFrom.current = to; }
+  };
+
   return (
-    <div
-      role="tab" aria-selected={tab.isActive} draggable title={tab.title}
-      onClick={() => setActiveTab(tab.id)}
+    <button
+      role="tab" aria-selected={tab.isActive} data-id={tab.id} draggable title={tab.title}
+      className={`tab${tab.isActive ? " active" : ""}${tab.isLoading ? " loading" : ""}${!tab.favicon && !tab.glyph ? " no-icon" : ""}`}
+      onClick={() => setActiveTab(tab.id)} onContextMenu={context}
       onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); closeTab(tab.id); } }}
-      onDragStart={() => { dragFrom.current = index; }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={() => { if (dragFrom.current !== null) reorderTabs(dragFrom.current, index); dragFrom.current = null; }}
-      className={`group flex h-8.5 min-w-11 max-w-55 flex-1 cursor-default items-center gap-2 rounded-lg px-2.5 text-[13px] select-none ${tab.isActive ? "bg-bg text-text shadow-(--tab-shadow)" : "text-muted hover:bg-hover"}`}
+      onDragStart={(e) => { dragFrom.current = index; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", tab.id); e.currentTarget.classList.add("dragging"); }}
+      onDragOver={dragOver} onDrop={(e) => e.preventDefault()}
+      onDragEnd={(e) => { dragFrom.current = null; e.currentTarget.classList.remove("dragging"); }}
     >
-      {tab.isLoading ? <span aria-label="Loading" className="size-4 shrink-0 animate-spin rounded-full border-2 border-muted border-t-accent" />
-        : tab.favicon ? <img src={tab.favicon} alt="" className="size-4 shrink-0" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        : tab.glyph ? <span className="ms shrink-0 text-base!">{tab.glyph}</span> : null}
-      <span className="min-w-0 flex-1 truncate">{tab.title}</span>
-      <button aria-label={`Close ${tab.title}`} onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }} className="grid size-5 shrink-0 place-items-center rounded-full hover:bg-press">
-        <span className="ms text-sm!">close</span>
-      </button>
-    </div>
+      <span className="tab-inner">
+        {tab.favicon ? <img className="fav" alt="" src={tab.favicon} onError={() => updateTab(tab.id, { favicon: null, glyph: "public" })} /> : <span className="ms tab-icon">{tab.glyph ?? "public"}</span>}
+        <span className="spinner" />
+        <span className="title">{tab.title}</span>
+        <span className="ms close" role="button" aria-label={`Close ${tab.title}`} onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}>close</span>
+      </span>
+    </button>
   );
 }
 
-function TabStrip() {
-  const { tabs, openTab } = useTabs();
+function TabStrip({ showMenu, onReload, flash }: { showMenu(m: MenuState): void; onReload(id: string): void; flash(m: string): void }) {
+  const { tabs, activeTab, openTab } = useTabs();
   const dragFrom = useRef<number | null>(null);
+  const strip = useRef<HTMLDivElement>(null);
+  // Scrolls the strip only; scrollIntoView can nudge the whole page.
+  useEffect(() => {
+    const s = strip.current, b = s?.querySelector<HTMLElement>(".tab.active");
+    if (!s || !b) return;
+    if (b.offsetLeft < s.scrollLeft) s.scrollLeft = b.offsetLeft;
+    else if (b.offsetLeft + b.offsetWidth > s.scrollLeft + s.clientWidth) s.scrollLeft = b.offsetLeft + b.offsetWidth - s.clientWidth;
+  }, [activeTab?.id, tabs.length]);
   return (
-    <header className="flex items-center gap-1 bg-frame px-2 pt-1.5 pb-1">
-      <div role="tablist" className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
-        {tabs.map((tab, i) => <TabButton key={tab.id} tab={tab} index={i} dragFrom={dragFrom} />)}
-      </div>
-      <button aria-label="New tab" title="New tab" className={iconButton} onClick={() => openTab()}><span className="ms">add</span></button>
+    <header id="tabbar">
+      <div ref={strip} id="tabs" role="tablist">{tabs.map((tab, i) => <TabButton key={tab.id} tab={tab} index={i} dragFrom={dragFrom} showMenu={showMenu} onReload={onReload} flash={flash} />)}</div>
+      <button id="new-tab" className="icon-btn" aria-label="New tab" title="New tab" onClick={() => openTab()}><span className="ms">add</span></button>
     </header>
   );
 }
 
-function AddressBar() {
-  const { activeTab, navigateTab } = useTabs();
+function Toolbar({ addressRef, onMenu, toggleBookmark, onReload, flash }: { addressRef: RefObject<HTMLInputElement | null>; onMenu(rect: DOMRect): void; toggleBookmark(): void; onReload(id: string): void; flash(m: string): void }) {
+  const { activeTab, navigateTab, updateTab } = useTabs();
   const { settings } = useSettings();
+  const [bookmarks] = useBookmarks();
   const [draft, setDraft] = useState<string | null>(null); // null: show the tab's address
-  const [notice, setNotice] = useState("");
-  const shown = activeTab?.url === NEW_TAB_URL ? "" : activeTab?.url ?? "";
+  const [items, setItems] = useState<Suggestion[]>([]);
+  const [selected, setSelected] = useState(-1);
+  const url = activeTab?.url ?? "";
+  const [zoom, setZoom] = useZoom(url);
+  const shown = url === NEW_TAB_URL ? "" : url;
   const handle = () => (activeTab ? tabFrames.get(activeTab.id) : undefined);
-  const win = () => handle()?.iframe.contentWindow;
+  const marked = isWeb(url) && bookmarks.some((b) => sameUrl(b.url, url));
 
+  const closeSuggestions = () => { setItems([]); setSelected(-1); };
+  useEffect(closeSuggestions, [activeTab?.id]);
+
+  const go = (input: string) => {
+    if (!activeTab) return;
+    const target = toUrl(input, settings);
+    setDraft(null);
+    closeSuggestions();
+    addressRef.current?.blur();
+    if (target.startsWith("silicon://") && !internalToRoute(target)) { flash(`Unknown page: ${target}`); return; }
+    navigateTab(activeTab.id, target);
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const input = (draft ?? shown).trim();
-    if (!activeTab || !input) return;
-    const url = toUrl(input, settings);
-    setDraft(null);
-    (document.activeElement as HTMLElement | null)?.blur();
-    if (url.startsWith("silicon://") && !internalToRoute(url)) { setNotice(`Unknown page: ${url}`); setTimeout(() => setNotice(""), 3000); return; }
-    navigateTab(activeTab.id, url);
+    const chosen = items[selected];
+    if (chosen) { go(chosen.search ? chosen.main : chosen.url!); return; }
+    closeSuggestions();
+    if ((draft ?? shown).trim()) go(draft ?? shown);
   };
-  const icon = !shown ? "search" : shown.startsWith("silicon://") ? "info" : shown.startsWith("https:") ? "lock" : "lock_open";
+  const keys = (e: KeyboardEvent) => {
+    if (!items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = items.length + 1; // -1 means "what you typed"
+      setSelected(((selected + 1 + (e.key === "ArrowDown" ? 1 : -1)) % n + n) % n - 1);
+    } else if (e.key === "Escape") closeSuggestions();
+  };
+  const reload = () => {
+    if (!activeTab) return;
+    if (activeTab.isLoading) { try { handle()?.iframe.contentWindow?.stop(); } catch {} updateTab(activeTab.id, { isLoading: false }); }
+    else onReload(activeTab.id);
+  };
 
   return (
-    <nav className="flex items-center gap-1 border-b border-border bg-bg px-2 py-1.5">
-      <button aria-label="Back" title="Back" className={iconButton} disabled={!activeTab?.canGoBack} onClick={() => handle()?.traverse(-1)}><span className="ms">arrow_back</span></button>
-      <button aria-label="Forward" title="Forward" className={iconButton} disabled={!activeTab?.canGoForward} onClick={() => handle()?.traverse(1)}><span className="ms">arrow_forward</span></button>
-      <button aria-label={activeTab?.isLoading ? "Stop" : "Reload"} title={activeTab?.isLoading ? "Stop" : "Reload"} className={iconButton} onClick={() => { const w = win(); if (activeTab?.isLoading) w?.stop(); else w?.location.reload(); }}>
-        <span className="ms">{activeTab?.isLoading ? "close" : "refresh"}</span>
-      </button>
-      <button aria-label="Home" title="Home" className={iconButton} onClick={() => activeTab && navigateTab(activeTab.id, NEW_TAB_URL)}><span className="ms">home</span></button>
-      <form onSubmit={submit} className="relative flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full bg-field px-3 focus-within:outline-2 focus-within:outline-accent">
-        <span className="ms text-icon text-lg!">{icon}</span>
+    <div id="toolbar">
+      <button id="back" className="icon-btn" aria-label="Back" title="Back" disabled={!activeTab?.canGoBack} onClick={() => handle()?.traverse(-1)}><span className="ms">arrow_back</span></button>
+      <button id="forward" className="icon-btn" aria-label="Forward" title="Forward" disabled={!activeTab?.canGoForward} onClick={() => handle()?.traverse(1)}><span className="ms">arrow_forward</span></button>
+      <button id="reload" className="icon-btn" aria-label={activeTab?.isLoading ? "Stop loading" : "Reload"} title={activeTab?.isLoading ? "Stop loading" : "Reload"} onClick={reload}><span className="ms">{activeTab?.isLoading ? "close" : "refresh"}</span></button>
+      <button id="home-btn" className="icon-btn" aria-label="Home" title="Home" onClick={() => activeTab && navigateTab(activeTab.id, NEW_TAB_URL)}><span className="ms">home</span></button>
+      <form id="address-form" onSubmit={submit}>
+        <span id="site-icon" className="ms">{url === NEW_TAB_URL ? "search" : url.startsWith("silicon://") ? "info" : url.startsWith("https:") ? "lock" : "lock_open"}</span>
         <input
-          aria-label="Address" placeholder="Search or enter address" spellCheck={false} autoComplete="off"
-          value={draft ?? shown} onChange={(e) => setDraft(e.target.value)} onFocus={(e) => e.target.select()} onBlur={() => setDraft(null)}
-          className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted"
+          ref={addressRef} id="address" className="address" type="text" placeholder="Search or enter web address" aria-label="Address bar" spellCheck={false} autoComplete="off"
+          value={draft ?? shown}
+          onChange={(e) => { setDraft(e.target.value); setItems(buildSuggestions(e.target.value, settings)); setSelected(-1); }}
+          onKeyDown={keys} onFocus={(e) => e.target.select()}
+          onBlur={() => setTimeout(() => { setDraft(null); closeSuggestions(); }, 100)}
         />
-        {notice && <span role="status" className="shrink-0 text-xs text-muted">{notice}</span>}
+        <button type="button" id="zoom-chip" title="Reset zoom" hidden={zoom === 1} onClick={() => setZoom(1)}><span className="ms">zoom_in</span><span id="zoom-pct">{Math.round(zoom * 100)}%</span></button>
+        <div id="suggest" role="listbox" hidden={!items.length}>
+          {items.map((it, i) => (
+            <div key={`${it.sub}${i}`} role="option" aria-selected={i === selected} className={`sg${i === selected ? " sel" : ""}`} onMouseDown={(e) => e.preventDefault() /* keep focus in the address bar */} onClick={() => go(it.search ? it.main : it.url!)}>
+              {it.img ? <img className="sg-img" alt="" src={it.img} /> : <span className="ms sg-ico">{it.icon}</span>}
+              <span className="sg-main">{it.main}</span>
+              <span className="sg-sub">{it.sub}</span>
+            </div>
+          ))}
+        </div>
       </form>
-      <button aria-label="Settings" title="Settings" className={iconButton} onClick={() => activeTab && navigateTab(activeTab.id, "silicon://settings")}><span className="ms">settings</span></button>
-    </nav>
+      <button id="bookmark-btn" className={`icon-btn${marked ? " on" : ""}`} aria-label="Bookmark this page" title={marked ? "Remove bookmark (Ctrl+D)" : "Bookmark this page (Ctrl+D)"} disabled={!isWeb(url)} onClick={toggleBookmark}><span className={`ms${marked ? " fill" : ""}`}>star</span></button>
+      <button id="menu-btn" className="icon-btn" aria-label="More" aria-haspopup="menu" title="More" data-opens-menu onClick={(e) => onMenu(e.currentTarget.getBoundingClientRect())}><span className="ms">more_vert</span></button>
+      <div id="loader" className={activeTab?.isLoading ? "on" : undefined} />
+    </div>
   );
 }
 
-export function BrowserShell() {
-  const { navigateTab, openTab, updateTab } = useTabs();
-  const { settings, loaded } = useSettings();
+export function BrowserShell({ isCover }: { isCover: boolean }) {
+  const { activeTab, closeTab, cycleTab, goToTab, navigateTab, openTab, reopenClosedTab, updateTab } = useTabs();
+  const { settings, loaded, update } = useSettings();
+  const [bookmarks, setBookmarks] = useBookmarks();
   useStealth(settings);
+
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [editing, setEditing] = useState<Bookmark | null>(null);
+  const [status, setStatus] = useState("");
+  const statusTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const find = useRef<FindHandle>(null);
+  const activeRef = useRef(activeTab);
+  activeRef.current = activeTab;
+  const activeId = activeTab?.id;
+  const [zoom, setZoom] = useZoom(activeTab?.url ?? "");
+
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const flash = useCallback((message: string) => {
+    setStatus(message);
+    clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => setStatus(""), 4000);
+  }, []);
+  const reloadTab = useCallback((id: string) => tabFrames.get(id)?.reload(), []);
+  const activeFrame = useCallback(() => (activeRef.current ? tabFrames.get(activeRef.current.id)?.iframe : undefined), []);
+  const showMenu = useCallback((m: MenuState) => setMenu((cur) => (m.owner && cur?.owner === m.owner ? null : m)), []);
+  const mainMenu = (rect: DOMRect) => showMenu({ owner: "main", at: rect, items: [
+    { icon: "bookmarks", label: "Bookmarks", hint: "Ctrl+Shift+O", run: () => openTab("silicon://bookmarks") },
+    { icon: "history", label: "History", hint: "Ctrl+H", run: () => openTab("silicon://history") },
+    { icon: "settings", label: "Settings", run: () => openTab("silicon://settings") },
+    "-",
+    { icon: "keyboard", label: "Keyboard shortcuts", run: () => setShortcutsOpen(true) },
+  ] });
+  const toggleBookmark = () => {
+    const tab = activeRef.current;
+    if (!tab || !isWeb(tab.url)) return;
+    if (bookmarks.some((b) => sameUrl(b.url, tab.url))) setBookmarks((l) => l.filter((b) => !sameUrl(b.url, tab.url)));
+    else setBookmarks((l) => [...l, { title: tab.title || hostOf(tab.url), url: tab.url, icon: tabIconData(tab.id) }]);
+  };
+  const openBookmark = (b: Bookmark, newTab: boolean) => {
+    if (newTab || !activeRef.current) openTab(b.url);
+    else navigateTab(activeRef.current.id, b.url);
+  };
+
+  const actions = useMemo<ShortcutActions>(() => ({
+    newTab: () => openTab(),
+    closeTab: () => { if (activeRef.current) closeTab(activeRef.current.id); },
+    reopenTab: () => { if (!reopenClosedTab()) flash("No recently closed tabs"); },
+    cycleTab, goToTab,
+    traverse: (delta) => { if (activeRef.current) tabFrames.get(activeRef.current.id)?.traverse(delta); },
+    focusAddress: () => { addressRef.current?.focus(); addressRef.current?.select(); },
+    reload: () => { if (activeRef.current) reloadTab(activeRef.current.id); },
+    zoom: (dir) => setZoom(dir === 0 ? 1 : zoomStep(zoomRef.current, dir)),
+    find: () => find.current?.open(),
+    toggleBookmark: () => toggleRef.current(),
+    toggleBookmarksBar: () => update({ showBookmarksBar: !loadSettings().showBookmarksBar }),
+    open: (url) => openTab(url),
+    autoCover: () => { if (!openCover(loadSettings(), "blank")) flash("Popup blocked. Allow popups for this site, then try again."); },
+    activeUrl: () => activeRef.current?.url,
+  }), [closeTab, cycleTab, flash, goToTab, openTab, reloadTab, reopenClosedTab, setZoom, update]);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const toggleRef = useRef(toggleBookmark);
+  toggleRef.current = toggleBookmark;
+  useShortcuts(actions, settings, isCover);
 
   // The API silicon:// pages use. Same name as the old shell's window.silicon.
   useEffect(() => {
@@ -108,6 +257,8 @@ export function BrowserShell() {
       createGameFrame: async (iframe) => (await bootEngine(loadSettings())).createFrame(iframe, null, attachWindow, { fixHtml: true }),
       openCover: (kind) => openCover(loadSettings(), kind),
       setCapture: setKeyCapture,
+      applyTransport: () => updateTransport(loadSettings()),
+      reload: () => { window.onbeforeunload = null; location.reload(); }, // "confirm before leaving" must not block this
     };
     return () => { delete window.silicon; };
   }, [navigateTab, openTab, updateTab]);
@@ -117,10 +268,16 @@ export function BrowserShell() {
   useEffect(() => { if (loaded) void updateTransport(settings).catch(() => {}); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [loaded, transport, wisp, proxy]);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-frame">
-      <TabStrip />
-      <AddressBar />
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <TabStrip showMenu={showMenu} onReload={reloadTab} flash={flash} />
+      <Toolbar addressRef={addressRef} onMenu={mainMenu} toggleBookmark={toggleBookmark} onReload={reloadTab} flash={flash} />
+      <BookmarkBar show={settings.showBookmarksBar} onOpen={openBookmark} onEdit={setEditing} showMenu={showMenu} />
       <TabViewport />
+      <FindBar ref={find} frame={activeFrame} tabKey={activeId} loading={!!activeTab?.isLoading} />
+      {menu && <Menu menu={menu} onClose={closeMenu} />}
+      <ShortcutsDialog open={shortcutsOpen} panic={settings.panicEnabled ? settings.panicKey : null} onClose={() => setShortcutsOpen(false)} />
+      <BookmarkEditDialog bookmark={editing} onClose={() => setEditing(null)} />
+      {status && <p className="status" role="status">{status}</p>}
     </div>
   );
 }

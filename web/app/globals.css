@@ -18,3 +18,10 @@
   --color-on-accent: var(--on-accent);
   --color-accent-soft: var(--accent-soft);
 }
+
+/* Tailwind's reset removes the margin that centers a modal dialog. */
+dialog { margin: auto; }
+
+/* Settings search: sections and cards with no matching rows disappear. */
+.s-card:not(:has(.s-row)), .s-section:not(:has(.s-row)), .s-section h2:has(+ .s-card:not(:has(.s-row))) { display: none !important; }
+.s-main:not(:has(.s-row)) .s-empty { display: block; }

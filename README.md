@@ -7,7 +7,7 @@ A self-hosted browser-in-a-tab and games launcher. You run it on your own comput
 
 Source code: <https://github.com/Carbonine/silicon>
 
-> **Experimental (v0.2 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
+> **Experimental (v0.3 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](#known-limitations).
 
 | | |
 | --- | --- |
@@ -21,6 +21,7 @@ Source code: <https://github.com/Carbonine/silicon>
 - [Why use Silicon](#why-use-silicon)
 - [Features](#features)
 - [Quick start](#quick-start)
+- [The Next.js frontend](#the-nextjs-frontend)
 - [Running it on a server (VPS)](#running-it-on-a-server-vps)
 - [Updating](#updating)
 - [Configuration](#configuration)
@@ -96,6 +97,18 @@ Then open <http://localhost:3000>.
 - No API keys or cloud accounts are needed.
 - It listens on `127.0.0.1` by default, so only your own machine can reach it. This is the recommended way to run Silicon.
 - A fresh clone gives you the newest code, which can be ahead of the latest release. To run a released version instead, see [Updating](#updating).
+
+## The Next.js frontend
+
+`web/` holds a second frontend built with Next.js, TypeScript and Tailwind CSS. It has the same features and runs alongside the backend, which doesn't change. It needs Node.js 20.9 or newer. With the server from the Quick start running, start it in a second terminal:
+
+```sh
+cd web
+npm install
+npm run dev
+```
+
+Then open <http://localhost:3001>. Your saved data belongs to each address, so use Settings → Data to export from `localhost:3000` and import on `localhost:3001`. See [web/README.md](web/README.md) for how it works and what differs.
 
 ## Running it on a server (VPS)
 
@@ -201,7 +214,7 @@ Silicon doesn't update itself, and it never contacts GitHub to check. Each versi
 
    ```sh
    git fetch --tags
-   git checkout v0.2.0
+   git checkout v0.3.0
    npm install
    ```
 
@@ -322,6 +335,7 @@ public/js/saves.js       Game saves export and import
 public/silicon/          silicon:// pages (newtab, games, play, bookmarks, history, settings, error)
 public/css/              theme.css (colors/fonts), style.css (shell), pages.css (pages)
 public/games/            Games hosted by this server
+web/                     The Next.js frontend
 docs/screenshots/        The screenshots shown above
 CHANGELOG.md             What changed in each version
 ROADMAP.md               Features planned for later

@@ -42,7 +42,7 @@ Nothing about the stored data changes: `lib/storage.ts` uses the same localStora
 - Read and write through `useLocalStorage`, or `useSettings` for settings. Never touch `localStorage` while rendering: the server has none, and the first render must match it, so the stored value arrives in an effect.
 - `storage` events keep the shell and every `silicon://` page in step, because each page runs in its own iframe.
 - Code that runs outside React, such as `recordVisit`, uses `readJson` and `writeJson`, which guard against blocked storage.
-- Game saves stay as they are. They are written by the games into this origin's localStorage and IndexedDB, and `/js/saves.js` can be loaded at runtime the same way as the proxy engine when the Data section is ported.
+- Game saves stay as they are. They are written by the games into this origin's localStorage and IndexedDB, and Settings loads `/js/saves.js` at runtime, the same way as the proxy engine.
 
 **localStorage belongs to one origin.** A move from `localhost:3000` to `localhost:3001`, or to a new domain, starts with empty data. Use Export data on the old address and import it on the new one. Game saves need their own export. Keeping the same domain and putting Next in front of the backend avoids this.
 
@@ -56,17 +56,15 @@ Treat this as untested. It needs three things:
 
 Even so, browsers connect to the backend's own address, so a network that blocks that address breaks the proxy whatever hosts the frontend. A static frontend also doesn't change the backend's IP address. Check the host's terms and acceptable use policy first.
 
-## Not ported yet
+## Differences from the old frontend
 
-The old frontend still has these:
+Everything has been ported. These small things behave differently or were left out:
 
-- Keyboard shortcuts other than the panic key, the shortcuts guide and the three-dots menu
-- Find in page and zoom
-- Bookmarks bar, star button, bookmark editing and reordering
-- Address bar suggestions
-- Reopen closed tab, the tab right-click menu and tab shortcuts
-- New tab shortcuts, automatic cover on first key press
-- Settings: export and import data, game saves, danger zone, About
-- Games page: categories, sorting, "continue playing", and new and popular rows
-- Error page: the other-transport button and likely causes
-- History page: search, grouping by day and clearing by time range
+- Tabs have no open and close animation, and proxied pages don't fade in.
+- A failed `silicon://` page name opens the new tab page if it comes from a link. Typed into the address bar, it shows "Unknown page", as before.
+- Games hosted by this server open from the game player. Typing a path such as `/games/foo` into the address bar searches for it.
+- Reordering a tab doesn't move its frame, as explained above.
+
+## Styling
+
+The shell and the `silicon://` pages use the backend's `/css/style.css` and `/css/pages.css`, so they look the same as the old frontend, with Tailwind for the rest. If the old frontend is removed, move those two files and `theme.css` into `web/` first, or restyle the pages in Tailwind.

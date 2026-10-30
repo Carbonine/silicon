@@ -6,13 +6,16 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
-## Unreleased
+## v0.3 beta (2026-10-30)
 
 ### Added
-- A new frontend in `web/`, built with Next.js, TypeScript and Tailwind CSS. It's a work in progress and doesn't have all the features of the current frontend yet (see `web/README.md`). The backend hasn't changed, and the current frontend keeps working.
+- A new frontend in `web/`, built with Next.js, TypeScript and Tailwind CSS. It has all the features of the current frontend (see `web/README.md` for small differences). The backend hasn't changed, and the current frontend keeps working.
 
 ### Fixed
 - Back and Forward now only affect the current tab. Before, going back in one tab with others open could move or reload a different tab, ending a game running there. Each tab now keeps its own history, so going back loads the page again, and scroll position and form contents aren't restored.
+
+### Changed
+- The version is now v0.3 beta.
 
 ## v0.2 beta (2026-10-04)
 

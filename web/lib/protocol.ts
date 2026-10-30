@@ -48,7 +48,7 @@ export function normalizeUrl(raw: string): string | null {
   const ok = h === "localhost" || h.startsWith("[") || /^\d{1,3}(\.\d{1,3}){3}$/.test(h)
     || (h.includes(".") && /^([a-z]{2,}|xn--[a-z0-9-]+)$/i.test(tld));
   if (!ok) return null;
-  return (/^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h === "localhost" ? `http://${input}` : u.href).replace(/^(http:\/\/[^/?#]+)$/, "$1/");
+  return h === "localhost" || /^[\d.]+$/.test(h) ? new URL(`http://${input}`).href : u.href; // local and IP targets rarely have TLS
 }
 
 export function normalizeSearchTemplate(raw: string): string | null {

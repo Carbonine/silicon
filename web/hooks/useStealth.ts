@@ -43,7 +43,7 @@ export function goPanic(s: Settings): void {
   try { top!.location.replace(panicTarget(s)); } catch { location.replace(panicTarget(s)); }
 }
 
-const matchesKey = (e: KeyboardEvent, k: PanicKey) => e.key === k.key && !!e.ctrlKey === !!k.ctrl && !!e.altKey === !!k.alt && !!e.shiftKey === !!k.shift && !!e.metaKey === !!k.meta;
+const matchesKey = (e: KeyboardEvent, k: PanicKey) => e.key.toLowerCase() === k.key.toLowerCase() && !!e.ctrlKey === !!k.ctrl && !!e.altKey === !!k.alt && !!e.shiftKey === !!k.shift && !!e.metaKey === !!k.meta;
 const IFRAME_ALLOW = "fullscreen; autoplay; clipboard-read; clipboard-write";
 
 /** Opens Silicon inside an about:blank or blob: window, then sends this tab to the panic site. */

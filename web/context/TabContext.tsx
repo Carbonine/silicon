@@ -7,8 +7,15 @@ import type { Tab } from "@/lib/types";
 export const NEW_TAB_URL = "silicon://newtab";
 
 interface TabActions {
-  /** `afterId` puts the new tab next to that one; otherwise it goes last. */
-  openTab(url?: string, title?: string, afterId?: string): string;
+  /** `place` is a tab id to open next to, or a position in the strip. Otherwise the tab goes last. */
+  openTab(url?: string, title?: string, place?: string | number): string;
+  reopenClosedTab(): boolean;
+  closeOtherTabs(id: string): void;
+  closeTabsToRight(id: string): void;
+  /** Moves `step` tabs along the strip, wrapping around. */
+  cycleTab(step: number): void;
+  /** 1 to 8 go to that tab, 9 to the last one. */
+  goToTab(n: number): void;
   closeTab(id: string): void;
   setActiveTab(id: string): void;
   duplicateTab(id: string): string | null;
@@ -18,7 +25,7 @@ interface TabActions {
   /** Records what a tab's page reports about itself. Never reloads the page. */
   updateTab(id: string, patch: Partial<Pick<Tab, "title" | "url" | "favicon" | "glyph" | "isLoading" | "canGoBack" | "canGoForward">>): void;
 }
-interface TabContextValue extends TabActions { tabs: Tab[]; activeTab: Tab | undefined }
+interface TabContextValue extends TabActions { tabs: Tab[]; activeTab: Tab | undefined; hasClosedTabs: () => boolean }
 
 type Action =
   | { type: "open"; tab: Tab; at?: number }
@@ -75,14 +82,47 @@ export function TabProvider({ children, initialUrl = NEW_TAB_URL }: { children: 
   const [tabs, dispatch] = useReducer(reducer, undefined, () => [{ ...make(initialUrl, undefined, 1), isActive: true }]);
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+  const closed = useRef<{ url: string; at: number }[]>([]); // for "Reopen closed tab"; in memory only
 
-  const actions = useMemo<TabActions>(() => ({
-    openTab(url = NEW_TAB_URL, title, afterId) {
-      const tab = make(url, title), i = tabsRef.current.findIndex((t) => t.id === afterId);
-      dispatch({ type: "open", tab, at: i < 0 ? undefined : i + 1 });
+  const actions = useMemo<TabActions>((): TabActions => {
+    const actions: TabActions = {
+    openTab(url = NEW_TAB_URL, title, place) {
+      const tab = make(url, title);
+      const i = typeof place === "string" ? tabsRef.current.findIndex((t) => t.id === place) : -1;
+      dispatch({ type: "open", tab, at: typeof place === "number" ? place : i < 0 ? undefined : i + 1 });
       return tab.id;
     },
-    closeTab(id) { dispatch({ type: "close", id, fallback: make(NEW_TAB_URL) }); },
+    closeTab(id) {
+      const at = tabsRef.current.findIndex((t) => t.id === id);
+      if (at >= 0 && tabsRef.current[at].url !== NEW_TAB_URL) {
+        closed.current.push({ url: tabsRef.current[at].url, at });
+        if (closed.current.length > 10) closed.current.shift();
+      }
+      dispatch({ type: "close", id, fallback: make(NEW_TAB_URL) });
+    },
+    reopenClosedTab() {
+      const c = closed.current.pop();
+      if (!c) return false;
+      actions.openTab(c.url, undefined, Math.min(c.at, tabsRef.current.length));
+      return true;
+    },
+    closeOtherTabs(id) {
+      dispatch({ type: "activate", id });
+      for (const t of tabsRef.current) if (t.id !== id) actions.closeTab(t.id);
+    },
+    closeTabsToRight(id) {
+      const i = tabsRef.current.findIndex((t) => t.id === id), right = tabsRef.current.slice(i + 1);
+      if (right.some((t) => t.isActive)) dispatch({ type: "activate", id });
+      for (const t of right) actions.closeTab(t.id);
+    },
+    cycleTab(step) {
+      const list = tabsRef.current, i = list.findIndex((t) => t.isActive);
+      if (list.length > 1) dispatch({ type: "activate", id: list[(i + step + list.length) % list.length].id });
+    },
+    goToTab(n) {
+      const list = tabsRef.current, tab = n === 9 ? list[list.length - 1] : list[n - 1];
+      if (tab) dispatch({ type: "activate", id: tab.id });
+    },
     setActiveTab(id) { dispatch({ type: "activate", id }); },
     duplicateTab(id) {
       const i = tabsRef.current.findIndex((t) => t.id === id);
@@ -94,9 +134,11 @@ export function TabProvider({ children, initialUrl = NEW_TAB_URL }: { children: 
     reorderTabs(startIndex, endIndex) { dispatch({ type: "reorder", from: startIndex, to: endIndex }); },
     navigateTab(id, url) { dispatch({ type: "navigate", id, url, nonce: ++nonce.current }); },
     updateTab(id, patch) { dispatch({ type: "update", id, patch }); },
-  }), [make]);
+    };
+    return actions;
+  }, [make]);
 
-  const value = useMemo(() => ({ ...actions, tabs, activeTab: tabs.find((t) => t.isActive) }), [actions, tabs]);
+  const value = useMemo(() => ({ ...actions, tabs, activeTab: tabs.find((t) => t.isActive), hasClosedTabs: () => closed.current.length > 0 }), [actions, tabs]);
   return <TabContext.Provider value={value}>{children}</TabContext.Provider>;
 }
 

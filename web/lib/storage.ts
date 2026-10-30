@@ -1,7 +1,7 @@
 import type { Settings } from "./types";
 
 // The same keys and shapes as the old frontend, so a Silicon backup imports unchanged.
-export const KEYS = { settings: "settings", theme: "theme", cloak: "cloak", bookmarks: "bookmarks:list", shortcuts: "bookmarks", history: "history", favs: "games:favs", recent: "games:recent" } as const;
+export const KEYS = { settings: "settings", theme: "theme", cloak: "cloak", bookmarks: "bookmarks:list", shortcuts: "bookmarks", history: "history", zoom: "zoom", favs: "games:favs", recent: "games:recent", gamesSource: "games:source" } as const;
 
 export const DEFAULT_SETTINGS: Settings = {
   transport: "epoxy", wisp: "", proxy: "", searchEngine: "duckduckgo", customSearch: "", theme: "dark",
