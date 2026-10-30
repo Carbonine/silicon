@@ -1,0 +1,32 @@
+{
+  "name": "silicon-web",
+  "version": "0.3.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "sync:sw": "node scripts/sync-sw.mjs",
+    "predev": "npm run sync:sw",
+    "dev": "next dev -p 3001",
+    "prebuild": "npm run sync:sw",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
+  "dependencies": {
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

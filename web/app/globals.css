@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* The colors live in the backend's /css/theme.css, shared with the old frontend. These names expose them to Tailwind. */
+@theme inline {
+  --color-frame: var(--frame);
+  --color-bg: var(--bg);
+  --color-field: var(--field);
+  --color-field-hover: var(--field-hover);
+  --color-tile: var(--tile);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-icon: var(--icon);
+  --color-hover: var(--hover);
+  --color-press: var(--press);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+}

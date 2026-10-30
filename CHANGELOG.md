@@ -8,6 +8,9 @@ Silicon is in beta, so things can change between versions.
 
 ## Unreleased
 
+### Added
+- A new frontend in `web/`, built with Next.js, TypeScript and Tailwind CSS. It's a work in progress and doesn't have all the features of the current frontend yet (see `web/README.md`). The backend hasn't changed, and the current frontend keeps working.
+
 ### Fixed
 - Back and Forward now only affect the current tab. Before, going back in one tab with others open could move or reload a different tab, ending a game running there. Each tab now keeps its own history, so going back loads the page again, and scroll position and form contents aren't restored.
 
