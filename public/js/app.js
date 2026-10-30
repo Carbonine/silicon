@@ -15,8 +15,7 @@ const store = {
 const tabs = new Map(); // id -> { id, btn, page, iframe, frame, url }
 let active = null, seq = 0, ready;
 
-// Every tab is one iframe. silicon://NAME pages are real pages served at /silicon/NAME, so the
-// iframe's own session history gives back/forward across internal pages and proxied sites alike.
+// Every tab is one iframe. silicon://NAME pages are real pages served at /silicon/NAME.
 const INTERNAL = new Set(["newtab", "games", "bookmarks", "history", "settings", "play"]);
 
 // ---------- Settings (stored in localStorage, edited on silicon://settings) ----------
@@ -236,9 +235,7 @@ function onKey(e) {
 // Key events don't cross iframe boundaries, so the listener goes on every window we can reach.
 // Deduped by document: an iframe's window object survives navigation, but each page gets a new document.
 const keyed = new WeakSet();
-const navOf = new WeakMap(); // window -> its Navigation object, grabbed before a proxied page can hide it
 function attachKeys(win) {
-  try { if (win?.navigation) navOf.set(win, win.navigation); } catch {} // every new page has a new Navigation object
   try {
     const doc = win?.document;
     if (doc && !keyed.has(doc)) { keyed.add(doc); win.addEventListener("keydown", onKey, true); }
@@ -484,19 +481,35 @@ function renderBookmarkBar() {
     barEl.append(more);
   }
 }
-// Grey out Back and Forward when the tab's frame has nowhere to go (Navigation API; if a page hides it, both stay enabled).
+// Each tab keeps its own list of addresses. The browser's history can't be used: all frames share one timeline,
+// so going back in one tab can rewind the others to that moment, which reloads them (and ends a running game).
 function paintNav(tab = tabs.get(active)) {
   if (!tab || active !== tab.id) return;
-  let nav; try { const w = tab.iframe.contentWindow; nav = navOf.get(w) || w.navigation; } catch {}
-  const known = nav && typeof nav.canGoBack === "boolean" && typeof nav.canGoForward === "boolean";
-  $("back").disabled = known && !nav.canGoBack;
-  $("forward").disabled = known && !nav.canGoForward;
+  $("back").disabled = tab.hist.at <= 0;
+  $("forward").disabled = tab.hist.at >= tab.hist.list.length - 1;
 }
-function paintNavSoon(tab) { paintNav(tab); setTimeout(() => paintNav(tab), 250); } // entries commit just after the load event
+function recordNav(tab, url) {
+  const h = tab.hist;
+  if (url === h.list[h.at]) return;
+  if (url === h.list[h.at - 1]) h.at--; // the page went back by itself
+  else if (url === h.list[h.at + 1]) h.at++;
+  else if (h.sameLoad && h.at >= 0) h.list[h.at] = url; // a redirect: Back must not land on it again
+  else { h.list = [...h.list.slice(0, h.at + 1), url]; h.at++; }
+  h.sameLoad = true;
+  paintNav(tab);
+}
+function traverse(delta) {
+  const tab = tabs.get(active), url = tab?.hist.list[tab.hist.at + delta];
+  if (url === undefined) return;
+  tab.hist.at += delta;
+  tab.hist.sameLoad = true;
+  paintNav(tab);
+  navigate(tab, url.startsWith(location.origin + "/") ? url.slice(location.origin.length) : url, { fromHistory: true });
+}
 
 const showAddress = (tab) => {
   if (active !== tab.id) return;
-  paintNavSoon(tab);
+  paintNav(tab);
   paintBookmark(tab);
   paintZoom(tab);
   if (document.activeElement !== address) address.value = tab.url === "silicon://newtab" ? "" : tab.url;
@@ -569,7 +582,7 @@ function createTab(at) {
   const iframe = document.createElement("iframe");
   iframe.title = "Page";
   page.append(iframe);
-  const tab = { id, btn, page, iframe, frame: null, url: "silicon://newtab" };
+  const tab = { id, btn, page, iframe, frame: null, url: "silicon://newtab", hist: { list: [], at: -1, sameLoad: false } };
   iframe.addEventListener("load", () => onLoad(tab));
   btn.addEventListener("animationend", () => btn.classList.remove("entering"), { once: true });
   $("tabs").insertBefore(btn, openTabEls()[at] || null);
@@ -632,7 +645,7 @@ function onLoad(tab) {
   const name = doc.documentElement.dataset.silicon;
   if (!name) { const err = proxyErrorText(doc); if (err !== null) return showProxyError(tab, err); }
   if (name) {
-    if (name !== "error") tab.url = "silicon://" + name + (doc.location.search || ""); // the error page keeps showing the address that failed
+    if (name !== "error") { tab.url = "silicon://" + name + (doc.location.search || ""); recordNav(tab, tab.url); } // the error page keeps showing the address that failed
     applyThemeTo(tab.iframe, document.documentElement.dataset.theme);
   }
   setLabel(tab, doc.title || (name ? name : hostOf(tab.url)));
@@ -640,6 +653,7 @@ function onLoad(tab) {
   setIcon(tab, name ? { glyph: INTERNAL_ICONS[name] } : { img: (tab.lastIcon = pageIcon(doc)) });
   if (!name) setTimeout(() => { try { const i = pageIcon(tab.iframe.contentDocument); if (i && i !== tab.lastIcon && tab.iframe.contentDocument === doc) setIcon(tab, { img: i }); } catch {} }, 2000); // icons set by scripts
   tab.iframe.classList.remove("pending");
+  tab.hist.sameLoad = false;
   showAddress(tab);
   if (!findBar.hidden && tab.id === active) runFind(); // a new page: search it too
 }
@@ -693,9 +707,11 @@ function cycleTab(step) {
 }
 function goToTab(n) { const ids = tabOrder(); const id = n === 9 ? ids[ids.length - 1] : ids[n - 1]; if (id) activate(id); }
 
-async function navigate(tab, input) {
+async function navigate(tab, input, { fromHistory = false } = {}) {
+  const note = (url) => { if (!fromHistory) { tab.hist.sameLoad = false; recordNav(tab, url); } };
   if (/^\/(?!\/)/.test(input.trim())) { // "/games/foo/index.html": served by this server, not proxied
     tab.url = location.origin + input.trim();
+    note(tab.url);
     setLabel(tab, "Loading…");
     showAddress(tab);
     tab.iframe.classList.remove("pending");
@@ -707,14 +723,16 @@ async function navigate(tab, input) {
     const m = url.match(/^silicon:\/\/([^/?#]+)\/?([?#].*)?$/);
     const name = m?.[1].toLowerCase();
     if (!name || !INTERNAL.has(name)) { flash(`Unknown page: ${url}`); showAddress(tab); return; }
+    note(url);
     tab.iframe.classList.remove("pending");
     tab.iframe.src = "/silicon/" + name + (m[2] || ""); // instant: no loading state
     return;
   }
   try { await boot(); } catch (err) { return flash(err.message); }
   tab.frame ||= (() => {
-    return createFrame(tab.iframe, (url) => { tab.url = url; showAddress(tab); }, attachKeys, { onOpen: (url) => openTab(url, tabOrder().indexOf(tab.id) + 1) });
+    return createFrame(tab.iframe, (url) => { tab.url = url; recordNav(tab, url); showAddress(tab); }, attachKeys, { onOpen: (url) => openTab(url, tabOrder().indexOf(tab.id) + 1) });
   })();
+  note(url);
   tab.url = url;
   setLabel(tab, hostOf(url));
   showAddress(tab);
@@ -965,8 +983,8 @@ $("address-form").onsubmit = (e) => {
 };
 address.addEventListener("focus", () => address.select());
 const win = () => tabs.get(active)?.iframe.contentWindow;
-$("back").onclick = () => { win()?.history.back(); setTimeout(() => paintNav(), 300); };
-$("forward").onclick = () => { win()?.history.forward(); setTimeout(() => paintNav(), 300); };
+$("back").onclick = () => traverse(-1);
+$("forward").onclick = () => traverse(1);
 function reloadActive() {
   const tab = tabs.get(active);
   const b = $("reload").firstElementChild;

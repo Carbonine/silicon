@@ -304,7 +304,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 
 Scramjet is service-worker based. The page's frames load `/proxy/<encoded-url>`, and the service worker (`public/sw.js`) rewrites those requests and sends them through a **Wisp** WebSocket on this server, using the **Epoxy** or **libcurl** transport. Because the rewriting happens in the browser, `curl` against a `/proxy/...` address does not return a site's page. If a request reaches Express without the worker, `/proxy/https://example.com` redirects to `/?url=https://example.com`, which starts the worker and opens the site.
 
-Each tab is an iframe. `silicon://` pages are ordinary pages served at `/silicon/<name>`, so the iframe's own history gives back and forward across internal pages and sites alike.
+Each tab is an iframe. `silicon://` pages are ordinary pages served at `/silicon/<name>`, and each tab keeps its own list of addresses for back and forward, because all the iframes on a page share one browser history. Going back loads the page again, so scroll position and form contents aren't restored.
 
 ## Project layout
 
@@ -333,6 +333,7 @@ To add an internal page, create `public/silicon/NAME.html` with `data-silicon="N
 
 Bug reports, ideas and pull requests are welcome. Please open an issue first for anything big, so we can agree on it before you spend time on it.
 
+- **Be kind:** everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 - **Reporting a problem:** say what you did, what you expected, and what happened, plus your browser and whether you run Silicon on `localhost` or a server. For a game that won't load, try the shield button in the player first: if it fails both through the proxy and loaded directly, it's the game's source, not Silicon (see [Game sources](#game-sources)).
 - **Changing the code:** fork the repository, make a branch, and open a pull request. Silicon is plain HTML, CSS and JavaScript with no build step and no frontend framework, so please keep it that way and match the style of the code around your change. Test by hand in a browser: run it with `npm run dev`, and try your change on both the dark and light themes. Please don't add a dependency without talking about it first.
 - **Adding a game source:** write an adapter in `server/games.js` and register it in `SOURCES` (see [Game sources](#game-sources)). Sources are read live and kept in memory, never copied into the repository.
