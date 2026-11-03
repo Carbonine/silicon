@@ -6,6 +6,11 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
+## Unreleased
+
+### Changed
+- The documentation moved out of the README. The README is now a short introduction, and the details (running on a server, updating, configuration, shortcuts, game sources, troubleshooting, limitations and how it works) are in `docs/GUIDE.md`.
+
 ## v0.3 beta (2026-10-30)
 
 ### Added

@@ -30,7 +30,7 @@ Make it harder for sites to recognize a visitor from the details of their browse
 
 - Normalize or add noise to the values fingerprinting scripts commonly read: canvas and WebGL output, audio, fonts, screen size, hardware concurrency, language and time zone.
 - Applied inside proxied pages only. Silicon's own pages are untouched.
-- Realistically this reduces fingerprinting; it can't make you anonymous, and aggressive spoofing can itself be distinctive or break sites. The README will say so plainly, and the setting will have modes (off, standard, strict) instead of a single switch.
+- Realistically this reduces fingerprinting; it can't make you anonymous, and aggressive spoofing can itself be distinctive or break sites. The documentation will say so plainly, and the setting will have modes (off, standard, strict) instead of a single switch.
 
 ## User agents
 
@@ -51,7 +51,7 @@ Play games streamed from cloud gaming services, so full PC games run on someone 
 
 ## Extensions
 
-Install browser extensions and have them run on the sites you open through Silicon. Today Silicon has none, which the README lists as a limitation.
+Install browser extensions and have them run on the sites you open through Silicon. Today Silicon has none, which the guide lists as a limitation.
 
 - **A possible route: [Sapphire](https://github.com/x8rr/sapphire).** It's a Scramjet plugin that provides the `chrome.*` extension APIs inside proxied pages, so Chrome extensions (userscript managers and the like) can run against proxied sites. It attaches the same way Silicon already attaches its own plugins when it creates a tab's frame, so it would fit in without reworking Silicon. It ships no interface of its own, so Silicon would build a small extensions page (install, enable, remove) in the style of Bookmarks and History.
 - **Not decided.** Sapphire is young, and it emulates the extension APIs rather than being a real browser engine, so some extensions won't work. Its blocking-rules matcher also isn't hooked into Scramjet's request path yet, so extension-based ad blockers would need extra work, or the built-in ad blocking above would cover that instead.
@@ -73,5 +73,5 @@ The one exception is an opt-in for the person running a given instance:
 
 - The host can turn on accounts and sync for their own instance. It is **off by default**, and nothing changes unless they enable it.
 - It exists for convenience only, such as syncing particular settings, bookmarks or game saves between devices.
-- It will not be used for tracking, profiling or fingerprinting, and it will store only what's needed for the feature to work. The README and Settings will say exactly what's stored when it's on.
+- It will not be used for tracking, profiling or fingerprinting, and it will store only what's needed for the feature to work. The documentation and Settings will say exactly what's stored when it's on.
 - It's the host's decision for their own instance. Silicon as shipped doesn't phone home or collect anything.
