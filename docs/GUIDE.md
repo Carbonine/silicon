@@ -224,6 +224,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 - Emulator-based games load their core in a background worker, which doesn't work through the proxy yet, so they default to loading directly (and may be blocked on restrictive networks).
 - Games depend on their source sites. If a source is slow, rate-limited or down, its list may be empty until the next refresh. Individual games can also be broken at the source, for example when they load files from a third-party host that has gone offline or blocked them (jsDelivr currently blocks the `gn-math` asset account, so games that use it don't load). A game that fails both through the proxy and loaded directly is a source problem, not a Silicon one.
 - Saved game data, bookmarks, history and settings live in your browser. Clearing site data removes them, so export your game saves if they matter. Game saves only cover games loaded through the proxy (a game loaded directly keeps its saves under its own site, which Silicon can't reach).
+- Tabs aren't saved between sessions: closing Silicon closes them.
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
 - Silicon is not a full replacement for a browser: no extensions and no downloads manager. Downloads work, but a file from a `download` link is held in memory before it's saved, so very large files can fail.
 - Find in page only matches text that is visible and unbroken. Text hidden on the page isn't searched, and a phrase split across formatting tags (for example `he<b>llo</b>`) isn't found.
