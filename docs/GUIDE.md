@@ -164,7 +164,7 @@ All optional. Copy `.env.example` to `.env` to change anything.
 | `PROXY_PREFIX` | `/proxy/` | URL path the proxy uses |
 | `WISP_PATH` | `/wisp/` | URL path of the Wisp (WebSocket) endpoint |
 | `GAMES_REFRESH_MINUTES` | `30` | How often the game lists are fetched again |
-| `SELENITE_URL`, `GNMATH_URL`, `TRUFFLED_URL`, `SERAPH_URL`, `CKV_URL`, `WASMRIP_URL` | each source's own site | Use a mirror instead |
+| `SELENITE_URL`, `GNMATH_URL`, `TRUFFLED_URL`, `SERAPH_URL`, `CKV_URL`, `WASMRIP_URL` | each source's own address | Use a mirror instead. For GN-Math this is the folder holding its GitHub repositories (see below) |
 
 ## Keyboard shortcuts
 
@@ -194,7 +194,7 @@ Games are not stored in this repository or on your disk. Each source is read liv
 | Source | Site |
 | --- | --- |
 | Selenite | selenite.cc |
-| GN-Math | gn-math.dev |
+| GN-Math | gn-math.dev (its list, covers and pages are read from its public GitHub repositories) |
 | Truffled | truffled.lol |
 | Seraph | ijnfem.github.io/seraph |
 | CKV (Chicken King's Vault) | wanocapy.github.io/ChickenKingsVault |

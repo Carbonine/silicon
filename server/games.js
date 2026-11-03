@@ -45,25 +45,20 @@ async function selenite() {
 }
 
 
-// ---- GN-Math (https://gn-math.dev): the home page holds the (encoded) paths of its catalog, cover art and
-// game pages ("[!] ..." entries in the catalog are notices, not games); the catalog lists games with {COVER_URL}/{HTML_URL} placeholders. Game pages are served as
+// ---- GN-Math (https://gn-math.dev): the site's home page is built by scripts and no longer lists where its catalog
+// lives, but GN-Math publishes the catalog, the cover art and the game pages in public GitHub repositories
+// (gn-math/assets, covers and html), which is where the site reads them. The catalog lists games with
+// {COVER_URL}/{HTML_URL} placeholders ("[!] ..." entries are notices, not games). The pages are served as
 // text/plain, so they are not plain "open this URL" games: see kind "html-text" below.
-const GNMATH = (process.env.GNMATH_URL || "https://gn-math.dev").replace(/\/$/, "");
-const gnBases = { cover: null, html: null };
+// GNMATH_URL is the folder that holds those three repositories; a mirror with the same layout works too.
+const GNMATH = (process.env.GNMATH_URL || "https://raw.githubusercontent.com/gn-math").replace(/\/$/, "");
+const GNMATH_COVERS = `${GNMATH}/covers/main`, GNMATH_HTML = `${GNMATH}/html/main`;
 async function gnmath() {
-  const opts = { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20000) };
-  const home = await fetch(`${GNMATH}/`, opts);
-  if (!home.ok) throw new Error(`GN-Math answered ${home.status}`);
-  const page = await home.text();
-  const grab = (name) => page.match(new RegExp(`(?:let|const|var)\\s+${name}\\s*=\\s*["']([^"']+)["']`))?.[1];
-  const zones = grab("zonesURL"), cover = grab("coverURL"), html = grab("htmlURL");
-  if (!zones || !cover || !html) throw new Error("couldn't find GN-Math's catalog paths (the site layout may have changed)");
-  const strip = (u) => u.replace(/\/+$/, "");
-  gnBases.cover = strip(cover); gnBases.html = strip(html);
-  const res = await fetch(new URL(zones, GNMATH + "/"), opts);
+  const res = await fetch(`${GNMATH}/assets/main/zones.json`, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`GN-Math catalog answered ${res.status}`);
   const list = await res.json();
-  const fill = (u, base) => String(u).replace("{COVER_URL}", gnBases.cover).replace("{HTML_URL}", base).replace(/([^:])\/\/+/g, "$1/");
+  if (!Array.isArray(list)) throw new Error("GN-Math's catalog isn't in the expected format (the layout may have changed)");
+  const fill = (u) => String(u).replace("{COVER_URL}", GNMATH_COVERS).replace("{HTML_URL}", GNMATH_HTML).replace(/([^:])\/\/+/g, "$1/");
   return list.filter((z) => z && z.id >= 0 && z.name && !/^\[!\]/.test(z.name)).map((z) => {
     const tags = (z.special || []).map((t) => String(t).toLowerCase());
     const external = /^https?:/i.test(z.url); // a few entries are plain links to another site
@@ -75,7 +70,7 @@ async function gnmath() {
       category: tags[0],
       byline: z.author ? `by ${z.author}` : undefined,
       thumb: z.cover && !/^https?:/i.test(z.cover) ? `/api/games/thumb/gnmath/${encodeURIComponent(String(z.cover).replace(/^\{COVER_URL\}\/?/, ""))}` : undefined,
-      url: external ? z.url : new URL(fill(z.url, gnBases.html), GNMATH + "/").href,
+      url: external ? z.url : new URL(fill(z.url)).href,
       kind: external ? undefined : "html-text",
       mode: external ? "external" : undefined,
       top: z.featured || undefined,
@@ -330,8 +325,7 @@ export function mountGames(app) {
     sendImage(res, `${CKV}/${f.split("/").map(encodeURIComponent).join("/")}`);
   });
   app.get("/api/games/thumb/wasmrip/:file", (req, res) => sendImage(res, `${WASMRIP}/img/${encodeURIComponent(req.params.file)}`));
-  app.get("/api/games/thumb/gnmath/:file", (req, res) =>
-    gnBases.cover ? sendImage(res, `${GNMATH}${gnBases.cover}/${encodeURIComponent(req.params.file)}`) : res.status(404).end());
+  app.get("/api/games/thumb/gnmath/:file", (req, res) => sendImage(res, `${GNMATH_COVERS}/${encodeURIComponent(req.params.file)}`));
 
   // GN-Math pages are text/plain upstream. For direct (non-proxied) play, fetch the page here and serve it as
   // text/html with a <base> tag so its relative files still load from gn-math.dev (same trick the site uses).

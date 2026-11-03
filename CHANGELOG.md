@@ -6,20 +6,17 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
-## Unreleased
-
-### Changed
-- The documentation moved out of the README. The README is now a short introduction, and the details (running on a server, updating, configuration, shortcuts, game sources, troubleshooting, limitations and how it works) are in `docs/GUIDE.md`.
-
 ## v0.3 beta (2026-10-30)
 
 ### Added
 - A new frontend in `web/`, built with Next.js, TypeScript and Tailwind CSS. It has all the features of the current frontend (see `web/README.md` for small differences). The backend hasn't changed, and the current frontend keeps working.
 
 ### Fixed
+- GN-Math games are listed again. The site changed and no longer says where its game list is, so Silicon now reads the list, covers and game pages from GN-Math's public GitHub repositories (`gn-math/assets`, `covers` and `html`). If you set `GNMATH_URL`, it now points at the folder that holds those repositories (default `https://raw.githubusercontent.com/gn-math`), not at the site.
 - Back and Forward now only affect the current tab. Before, going back in one tab with others open could move or reload a different tab, ending a game running there. Each tab now keeps its own history, so going back loads the page again, and scroll position and form contents aren't restored.
 
 ### Changed
+- The documentation moved out of the README. The README is now a short introduction, and the details (running on a server, updating, configuration, shortcuts, game sources, troubleshooting, limitations and how it works) are in `docs/GUIDE.md`.
 - The version is now v0.3 beta.
 
 ## v0.2 beta (2026-10-04)
