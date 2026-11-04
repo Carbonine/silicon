@@ -201,6 +201,8 @@ Games are not stored in this repository or on your disk. Each source is read liv
 | Wasm.RIP | wasm.rip |
 | Silicon | games hosted by this server in `public/games/` (see `public/games/games.json`). Empty by default, and hidden until you add one |
 
+GN-Math is read from its GitHub repositories. If GitHub's file host can't be reached from your server, Silicon reads the same files from `raw.githack.com` instead, and says so in the server log. The log also notes when GN-Math's list was last updated, which is a quick way to tell whether it has gone stale.
+
 **Silicon does not host, own or control these games or sites.** It only links to them and, by default, loads them through your own server's proxy. Their content belongs to their authors and sites, and a source can change or disappear at any time. You are responsible for the sources you enable and for following the rules of the sites and networks you use.
 
 **If a game doesn't load or doesn't work, that is usually the game's source, not Silicon.** Silicon only passes the game along. Each game is hosted by its source (and often loads its files from other sites), so a game can be broken, slow or missing no matter how you open it. A good test is the shield button in the player: if the game fails both through the proxy **and** loaded directly, the problem is on the source's side (for example the game was taken down, a file it needs is blocked, or the site is down) and Silicon can't fix it. Only a game that works one way but not the other points to a proxy problem, and that's worth reporting. Games that are known to be broken can be left out with `server/games-hidden.json`.

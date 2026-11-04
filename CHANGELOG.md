@@ -6,6 +6,11 @@ Silicon is in beta, so things can change between versions.
 
 > **Update when a new version is released, not after every commit.** Commits between releases are work in progress and may be unfinished or broken, so it is **highly recommended** to wait for a new version before updating. **Security fixes are always published as a new version,** so you won't miss one by waiting.
 
+## Unreleased (v0.4)
+
+### Added
+- GN-Math has a backup route. If GitHub's file host can't be reached from your server, its list, covers and games are read from `raw.githack.com` instead. The server log also says when GN-Math's list was last updated, so a stale list is easy to spot.
+
 ## v0.3 beta (2026-10-30)
 
 ### Added

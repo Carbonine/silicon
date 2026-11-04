@@ -52,13 +52,44 @@ async function selenite() {
 // text/plain, so they are not plain "open this URL" games: see kind "html-text" below.
 // GNMATH_URL is the folder that holds those three repositories; a mirror with the same layout works too.
 const GNMATH = (process.env.GNMATH_URL || "https://raw.githubusercontent.com/gn-math").replace(/\/$/, "");
-const GNMATH_COVERS = `${GNMATH}/covers/main`, GNMATH_HTML = `${GNMATH}/html/main`;
-async function gnmath() {
-  const res = await fetch(`${GNMATH}/assets/main/zones.json`, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`GN-Math catalog answered ${res.status}`);
+// Where the repositories are read from, in order. If the first host doesn't answer (for example it is blocked from this
+// server), the next one is tried. githack serves the same files. (statically.io cuts large files short, so it can't be used.)
+const GN_HOSTS = [
+  { name: "GitHub", file: (repo, path) => `${GNMATH}/${repo}/main/${path}` },
+  { name: "githack", file: (repo, path) => `https://raw.githack.com/gn-math/${repo}/main/${path}` },
+];
+let gnHost = GN_HOSTS[0]; // the host the current list came from; covers and game pages are read from it too
+const gnFolder = (repo) => gnHost.file(repo, "").replace(/\/$/, "");
+async function gnList(host) {
+  const res = await fetch(host.file("assets", "zones.json"), { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`${host.name} answered ${res.status}`);
   const list = await res.json();
-  if (!Array.isArray(list)) throw new Error("GN-Math's catalog isn't in the expected format (the layout may have changed)");
-  const fill = (u) => String(u).replace("{COVER_URL}", GNMATH_COVERS).replace("{HTML_URL}", GNMATH_HTML).replace(/([^:])\/\/+/g, "$1/");
+  if (!Array.isArray(list)) throw new Error(`${host.name} gave a list in an unexpected format (the layout may have changed)`);
+  return list;
+}
+// When the catalog was last changed (the date of its latest commit), logged when it changes so a stale list is easy to spot.
+// Best effort: this uses GitHub's API, so it's skipped for a custom GNMATH_URL and ignored if it fails.
+let gnUpdated = "";
+async function gnFreshness() {
+  if (process.env.GNMATH_URL) return;
+  try {
+    const res = await fetch("https://api.github.com/repos/gn-math/assets/commits?path=zones.json&per_page=1", { headers: { "user-agent": UA, accept: "application/vnd.github+json" }, signal: AbortSignal.timeout(8000) });
+    const date = res.ok && (await res.json())?.[0]?.commit?.committer?.date;
+    if (!date || date === gnUpdated) return;
+    gnUpdated = date;
+    const days = Math.floor((Date.now() - Date.parse(date)) / 864e5);
+    console.log(`[games] gnmath: list last updated ${date.slice(0, 16).replace("T", " ")} UTC${days >= 30 ? ` (${days} days ago: it may be out of date)` : ""}`);
+  } catch {}
+}
+async function gnmath() {
+  let list, failures = [];
+  for (const host of GN_HOSTS) {
+    try { list = await gnList(host); if (host !== gnHost) console.warn(`[games] gnmath: reading from ${host.name} now`); gnHost = host; break; }
+    catch (err) { failures.push(err.message || String(err)); }
+  }
+  if (!list) throw new Error(`couldn't read GN-Math's list (${failures.join("; ")})`);
+  gnFreshness();
+  const fill = (u) => String(u).replace("{COVER_URL}", gnFolder("covers")).replace("{HTML_URL}", gnFolder("html")).replace(/([^:])\/\/+/g, "$1/");
   return list.filter((z) => z && z.id >= 0 && z.name && !/^\[!\]/.test(z.name)).map((z) => {
     const tags = (z.special || []).map((t) => String(t).toLowerCase());
     const external = /^https?:/i.test(z.url); // a few entries are plain links to another site
@@ -325,7 +356,7 @@ export function mountGames(app) {
     sendImage(res, `${CKV}/${f.split("/").map(encodeURIComponent).join("/")}`);
   });
   app.get("/api/games/thumb/wasmrip/:file", (req, res) => sendImage(res, `${WASMRIP}/img/${encodeURIComponent(req.params.file)}`));
-  app.get("/api/games/thumb/gnmath/:file", (req, res) => sendImage(res, `${GNMATH_COVERS}/${encodeURIComponent(req.params.file)}`));
+  app.get("/api/games/thumb/gnmath/:file", (req, res) => sendImage(res, `${gnFolder("covers")}/${encodeURIComponent(req.params.file)}`));
 
   // GN-Math pages are text/plain upstream. For direct (non-proxied) play, fetch the page here and serve it as
   // text/html with a <base> tag so its relative files still load from gn-math.dev (same trick the site uses).
