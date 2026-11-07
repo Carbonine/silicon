@@ -10,7 +10,7 @@ An open-source browser-in-a-tab and games launcher. You run it on your own compu
 
 Source code: <https://github.com/Carbonine/silicon>
 
-> **Experimental (v0.3 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](docs/GUIDE.md#known-limitations).
+> **Experimental (v0.4 beta).** Silicon is early software. Expect rough edges, missing features and things that break when a website, a game source or the proxy changes. Don't rely on it for anything important, and don't enter passwords or other sensitive data on sites you reach through it unless you trust where it is hosted. See [Known limitations](docs/GUIDE.md#known-limitations).
 
 | | |
 | --- | --- |
