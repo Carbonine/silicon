@@ -80,6 +80,14 @@
             <div class="s-ctl"><label class="switch"><input type="checkbox" id="save-history"><span></span></label></div></div>
         </div>
 
+        <h2>Browser identity</h2>
+        <div class="s-card">
+          <div class="s-row"><div class="s-label"><div class="t">User agent</div><div class="d">The browser and device that sites think you are using. Default sends your own browser's. It applies to pages you open after changing it, so reload any open tabs. It changes the user agent and what pages read from <b>navigator</b>, not things like your screen size or fonts.</div></div>
+            <div class="s-ctl"><select id="ua"></select></div></div>
+          <div class="s-row" id="row-ua-custom"><div class="s-label"><div class="t">Custom user agent</div><div class="d">The exact user agent string to send. Plain text only.</div></div>
+            <div class="s-ctl"><input id="ua-custom" type="text" spellcheck="false" autocomplete="off" placeholder="Mozilla/5.0 (…)"></div></div>
+        </div>
+
         <h2>Leaving</h2>
         <div class="s-card">
           <div class="s-row"><div class="s-label"><div class="t">Confirm before leaving</div><div class="d">Ask before this tab is closed or reloaded. The panic key ignores this. Off by default.</div></div>
@@ -171,6 +179,7 @@
 
   <script type="module">
     import { scan, buildExport, parseFile, importSaves } from "/js/saves.js";
+    import { USER_AGENTS, validUserAgent } from "/js/useragents.js";
     const S = parent.silicon.settings;
     const $ = (id) => document.getElementById(id);
     let toastTimer;
@@ -186,6 +195,13 @@
     // Values
     for (const [k, e] of Object.entries(S.engines)) $("engine").append(new Option(e.label, k));
     for (const [k, c] of Object.entries(S.cloaks)) $("cloak").append(new Option(c.label, k));
+    $("ua").append(new Option("Default (your browser's own)", "default"));
+    for (const g of [...new Set(USER_AGENTS.map((u) => u.group))]) {
+      const og = document.createElement("optgroup"); og.label = g;
+      for (const u of USER_AGENTS.filter((x) => x.group === g)) og.append(new Option(u.label, u.id));
+      $("ua").append(og);
+    }
+    $("ua").append(new Option("Custom…", "custom"));
     const fmtKey = (c) => c ? [c.ctrl && "Ctrl", c.alt && "Alt", c.shift && "Shift", c.meta && "Cmd", c.key.length === 1 ? c.key.toUpperCase() : c.key === " " ? "Space" : c.key].filter(Boolean).join(" + ") : "Not set";
     $("wisp").placeholder = S.defaultWisp();
     function fill() {
@@ -197,6 +213,7 @@
       $("proxy-games").checked = v.proxyGames; $("panic-on").checked = v.panicEnabled; $("panic-url").value = v.panicUrl; $("auto-cover").checked = v.autoCover; $("confirm-leave").checked = v.confirmLeave; $("save-history").checked = v.saveHistory; $("bm-bar").checked = v.showBookmarksBar;
       if (!capturing) $("panic-key").textContent = fmtKey(v.panicKey);
       for (const id of ["panic-key", "panic-clear", "panic-url"]) $(id).disabled = !v.panicEnabled;
+      $("ua").value = v.userAgent; $("ua-custom").value = v.customUserAgent; $("row-ua-custom").style.display = v.userAgent === "custom" ? "" : "none";
       $("cloak-always").checked = v.cloakAlways; $("cloak-site").value = v.cloakIcon; $("cloak-title").value = v.cloakTitle;
       $("row-cloak-site").style.display = $("row-cloak-title").style.display = v.cloak === "custom" ? "" : "none";
       $("cloak-preview").src = S.cloakIdentity(v.cloak).icon; $("cloak-preview").style.visibility = v.cloak === "silicon" ? "hidden" : "visible";
@@ -222,6 +239,12 @@
     $("bm-bar").onchange = () => save({ showBookmarksBar: $("bm-bar").checked });
     $("save-history").onchange = () => save({ saveHistory: $("save-history").checked });
     $("cloak-always").onchange = () => save({ cloakAlways: $("cloak-always").checked });
+    $("ua").onchange = () => save({ userAgent: $("ua").value });
+    $("ua-custom").onchange = () => {
+      const raw = $("ua-custom").value.trim();
+      if (raw && !validUserAgent(raw)) { toast("Use plain text, up to 300 characters"); $("ua-custom").value = S.get().customUserAgent; return; }
+      save({ customUserAgent: raw });
+    };
     $("cloak-site").onchange = () => {
       const raw = $("cloak-site").value.trim(), url = raw ? S.iconUrl(raw) : "";
       if (raw && !url) { toast("Enter a full address starting with http:// or https://"); $("cloak-site").value = S.get().cloakIcon; return; }

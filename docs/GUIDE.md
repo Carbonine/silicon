@@ -229,6 +229,7 @@ To add a source, write an adapter in `server/games.js` (an async function that r
 - Tabs aren't saved between sessions: closing Silicon closes them.
 - Bookmarks are a flat list (no folders), and there are no accounts or sync.
 - Silicon is not a full replacement for a browser: no extensions and no downloads manager. Downloads work, but a file from a `download` link is held in memory before it's saved, so very large files can fail.
+- The user agent switcher changes the user agent sent to sites, what pages read from `navigator`, and the client hints Chromium browsers send. It doesn't change things sites can measure, such as screen size, fonts or which features your browser really has, so a determined site can still tell. Web workers still report your real browser. It applies to pages opened after you change it.
 - Find in page only matches text that is visible and unbroken. Text hidden on the page isn't searched, and a phrase split across formatting tags (for example `he<b>llo</b>`) isn't found.
 - Only tested in recent Chromium-based browsers. Some browsers keep a few shortcuts (Ctrl+L, Ctrl+R, Ctrl++ and Ctrl+-, for example) for themselves, so they may not reach Silicon. The Alt versions of the tab shortcuts always work.
 - Icons on the new tab shortcuts are found and fetched by your server from the site itself (and cached in memory for a few hours). Some sites have no icon the server can reach, and then the tile shows a globe. Tab cloak icons are loaded by your browser from the sites themselves, and the custom cloak needs an icon address you provide.
@@ -251,6 +252,7 @@ public/sw.js             Scramjet service worker
 public/index.html        The browser shell
 public/js/app.js         Shell: tabs, address bar, bookmarks, menus, settings, privacy tools
 public/js/proxy-client.js  Browser side of the proxy (init, transport, frames)
+public/js/useragents.js  The browser identities (update the version numbers at the top when browsers move on)
 public/js/saves.js       Game saves export and import
 public/silicon/          silicon:// pages (newtab, games, play, bookmarks, history, settings, error)
 public/css/              theme.css (colors/fonts), style.css (shell), pages.css (pages)

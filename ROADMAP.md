@@ -32,14 +32,13 @@ Make it harder for sites to recognize a visitor from the details of their browse
 - Applied inside proxied pages only. Silicon's own pages are untouched.
 - Realistically this reduces fingerprinting; it can't make you anonymous, and aggressive spoofing can itself be distinctive or break sites. The documentation will say so plainly, and the setting will have modes (off, standard, strict) instead of a single switch.
 
-## User agents
+## Per-site user agents
 
-Choose the browser identity that sites see.
+Silicon already lets you choose the browser identity that sites see (Settings, Privacy). It's one setting for everything.
 
-- A list of common presets (current Chrome, Firefox and Safari on desktop, plus a mobile option) and a custom string.
-- Set per tab or per site, so one site can see a phone while the rest see a desktop browser.
-- Applied to the request header and to `navigator.userAgent`, along with the related client-hint headers, so the two agree with each other. A mismatch is a common giveaway.
-- Related to anti-fingerprinting, and the two would share the same settings area.
+- Set it per tab or per site, so one site can see a phone while the rest see a desktop browser.
+- Cover web workers and service workers, which currently still report your real browser.
+- Related to anti-fingerprinting: the identity setting would grow into the same settings area.
 
 ## Cloud gaming
 

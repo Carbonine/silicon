@@ -9,7 +9,11 @@ Silicon is in beta, so things can change between versions.
 ## Unreleased (v0.4)
 
 ### Added
+- A user agent switcher (Settings, Privacy, Browser identity). Pick what browser sites see you as: Chrome and Edge on Windows, Mac, Linux or Android, Firefox on Windows, Mac, Linux or Android, Safari on Mac or iPhone, or your own text. It changes the user agent sent to sites, what pages read from `navigator`, and the client hints, so they agree with each other. Default leaves your browser's own. It applies to pages you open after changing it. Both frontends have it.
 - GN-Math has a backup route. If GitHub's file host can't be reached from your server, its list, covers and games are read from `raw.githack.com` instead. The server log also says when GN-Math's list was last updated, so a stale list is easy to spot.
+
+### Fixed
+- In the Next.js frontend, the panic key now starts unbound like the original, instead of defaulting to the backtick key.
 
 ## v0.3 beta (2026-10-30)
 

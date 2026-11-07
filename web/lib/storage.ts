@@ -6,8 +6,8 @@ export const KEYS = { settings: "settings", theme: "theme", cloak: "cloak", book
 export const DEFAULT_SETTINGS: Settings = {
   transport: "epoxy", wisp: "", proxy: "", searchEngine: "duckduckgo", customSearch: "", theme: "dark",
   cloak: "silicon", cloakIcon: "", cloakTitle: "", cloakAlways: false,
-  panicEnabled: false, panicKey: { key: "`" }, panicUrl: "https://www.google.com/",
-  autoCover: false, confirmLeave: false, proxyGames: true, saveHistory: true, showBookmarksBar: true,
+  panicEnabled: false, panicKey: null, panicUrl: "https://www.google.com/",
+  autoCover: false, confirmLeave: false, proxyGames: true, saveHistory: true, showBookmarksBar: true, userAgent: "default", customUserAgent: "",
 };
 
 // Storage can throw (private windows, blocked site data), so every read and write is guarded.

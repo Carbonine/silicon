@@ -33,7 +33,7 @@ Source code: <https://github.com/Carbonine/silicon>
 - **Browser:** tabs you can drag, duplicate and reopen, an address bar with suggestions from your own bookmarks and history, find in page, per-site zoom, downloads, and links that open as new tabs. Dark, light or system theme, and your choice of search engine.
 - **Bookmarks and history:** a bookmarks bar, a manager and a history page, all kept in your browser. History can be turned off.
 - **Games:** a library fed live by several [game sources](docs/GUIDE.md#game-sources), with search, categories, favorites and "continue playing". The player can load a game through the proxy or directly, and game saves can be exported and imported.
-- **Privacy and stealth:** a panic key, tab cloaking that makes the tab look like another site, cover windows, and a confirm-before-leaving option.
+- **Privacy and stealth:** a panic key, tab cloaking that makes the tab look like another site, a user agent switcher (Chrome, Edge, Firefox and Safari on Windows, Mac, Linux, Android and iPhone, or your own), cover windows, and a confirm-before-leaving option.
 - **Proxy:** Scramjet 2 with the Epoxy or libcurl transport, an optional upstream SOCKS5 or HTTP proxy, and the option to use another Wisp server.
 
 See the [keyboard shortcuts](docs/GUIDE.md#keyboard-shortcuts) for everything you can do without the mouse.

@@ -1,4 +1,4 @@
-import { init, setTransport, createFrame, defaultWisp } from "/js/proxy-client.js";
+import { init, setTransport, setUserAgent, createFrame, defaultWisp } from "/js/proxy-client.js";
 
 // The shell must only ever run as the top page. If a proxied redirect ever lands a frame on it,
 // stop here instead of nesting another copy of the browser inside itself.
@@ -44,6 +44,7 @@ const DEFAULTS = {
   cloak: store.get("cloak") || "silicon", cloakIcon: "", cloakTitle: "", cloakAlways: false,
   panicEnabled: false, panicKey: null, panicUrl: "https://www.google.com/", // key: { key, ctrl, alt, shift, meta }
   autoCover: false, confirmLeave: false, customSearch: "", proxyGames: true, saveHistory: true, showBookmarksBar: true,
+  userAgent: "default", customUserAgent: "", // the browser identity sites see (see useragents.js)
 };
 const loadSettings = () => { try { return { ...DEFAULTS, ...JSON.parse(store.get("settings")) }; } catch { return { ...DEFAULTS }; } };
 let settings = loadSettings();
@@ -53,6 +54,7 @@ async function updateSettings(patch) {
   store.set("settings", JSON.stringify(settings));
   if ("theme" in patch) applyTheme();
   if ("showBookmarksBar" in patch) renderBookmarkBar();
+  if ("userAgent" in patch || "customUserAgent" in patch) setUserAgent(settings);
   applyLeaveGuard();
   refreshCloak();
   if (ready && JSON.stringify([settings.transport, settings.wisp, settings.proxy]) !== before) await setTransport(settings);

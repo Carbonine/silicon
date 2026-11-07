@@ -57,6 +57,9 @@ export interface Settings {
   proxyGames: boolean;
   saveHistory: boolean;
   showBookmarksBar: boolean;
+  /** The browser identity sites see: "default", a preset id from /js/useragents.js, or "custom". */
+  userAgent: string;
+  customUserAgent: string;
 }
 
 export interface ScramjetFrame { go(url: string): void }

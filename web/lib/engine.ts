@@ -5,6 +5,7 @@ import type { ScramjetFrame, Settings } from "./types";
 interface ProxyClient {
   init(s: Settings): Promise<void>;
   setTransport(s: Settings): Promise<void>;
+  setUserAgent(s: Settings): void;
   defaultWisp(): string;
   createFrame(iframe: HTMLIFrameElement, onUrl: ((url: string) => void) | null, onWindow: ((win: Window) => void) | null, options?: { fixHtml?: boolean; onOpen?: (url: string) => void }): ScramjetFrame;
 }
@@ -19,4 +20,6 @@ export function bootEngine(s: Settings): Promise<ProxyClient> {
   booting ??= loadClient().then(async (client) => { await client.init(withWisp(s)); return client; }).catch((err) => { booting = null; throw err; });
   return booting;
 }
+// Takes effect for new requests at once. A page that is already open keeps what it read until it reloads.
+export const updateIdentity = async (s: Settings): Promise<void> => { if (booting) (await booting).setUserAgent(s); };
 export const updateTransport = async (s: Settings): Promise<void> => { if (booting) await (await booting).setTransport(withWisp(s)); };

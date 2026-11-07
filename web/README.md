@@ -28,6 +28,7 @@ Open <http://localhost:3001>. The backend stays on port 3000. For production, us
 
 - **Networking.** `next.config.ts` forwards `/proxy`, `/wisp`, `/scram`, `/epoxy`, `/libcurl`, `/api`, `/vendor`, `/css` and `/js` to Express. `/wisp/` has its own rule because Express only accepts the path with its trailing slash.
 - **Service worker.** `scripts/sync-sw.mjs` copies `../public/sw.js` unchanged into `public/` before `dev` and `build`, so there is one version of it. `next.config.ts` adds its headers. The copy is ignored by git.
+- **Browser identities.** The user agent presets come from the backend's `/js/useragents.js`, shared with the old frontend, and are applied by `/js/proxy-client.js`.
 - **Proxy engine.** `lib/engine.ts` loads the backend's `/js/proxy-client.js` at runtime, so the Scramjet plugins aren't duplicated.
 - **Tabs.** `context/TabContext.tsx` holds tabs in memory. A tab's `nav.nonce` only changes when something asks it to load an address. A page reporting its own URL updates `url` without reloading.
 - **Keeping tabs alive.** `components/TabViewport.tsx` renders every tab and hides inactive ones with `hidden`. Frames render in creation order, not strip order, because moving an iframe in the DOM reloads it.

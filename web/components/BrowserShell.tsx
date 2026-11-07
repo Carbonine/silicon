@@ -14,7 +14,7 @@ import { useShortcuts, type ShortcutActions } from "@/hooks/useShortcuts";
 import { openCover, useStealth } from "@/hooks/useStealth";
 import { useZoom } from "@/hooks/useZoom";
 import { sameUrl, type Bookmark } from "@/lib/bookmarks";
-import { bootEngine, updateTransport } from "@/lib/engine";
+import { bootEngine, updateIdentity, updateTransport } from "@/lib/engine";
 import { tabFrames, tabIdOfWindow } from "@/lib/frames";
 import { attachWindow, setKeyCapture } from "@/lib/keys";
 import { hostOf, internalToRoute, toUrl } from "@/lib/protocol";
@@ -266,6 +266,9 @@ export function BrowserShell({ isCover }: { isCover: boolean }) {
   // Settings changed the connection: open tabs pick it up without being rebuilt.
   const { transport, wisp, proxy } = settings;
   useEffect(() => { if (loaded) void updateTransport(settings).catch(() => {}); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [loaded, transport, wisp, proxy]);
+
+  const { userAgent, customUserAgent } = settings;
+  useEffect(() => { if (loaded) void updateIdentity(settings).catch(() => {}); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [loaded, userAgent, customUserAgent]);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">

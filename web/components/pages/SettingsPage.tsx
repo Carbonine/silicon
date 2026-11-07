@@ -40,6 +40,9 @@ interface SavesModule {
   parseFile(text: string): SaveSite[];
   importSaves(sites: SaveSite[], sel: Selection): Promise<{ items: number; sites: number; problems: string[] }>;
 }
+// The browser identities, from the backend's /js/useragents.js (shared with the old frontend).
+interface UserAgents { USER_AGENTS: { id: string; group: string; label: string }[]; validUserAgent(s: string): boolean }
+const loadUserAgents = () => import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "/js/useragents.js" as string) as Promise<UserAgents>;
 const loadSaves = () => import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "/js/saves.js" as string) as Promise<SavesModule>;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -132,6 +135,8 @@ export function SettingsPage() {
   const [scanning, setScanning] = useState(false);
   const [wispDefault, setWispDefault] = useState("");
   const [engine, setEngine] = useState("Scramjet");
+  const [agents, setAgents] = useState<UserAgents | null>(null);
+  useEffect(() => { void loadUserAgents().then(setAgents).catch(() => {}); }, []);
   const backupFile = useRef<HTMLInputElement>(null);
   const savesFile = useRef<HTMLInputElement>(null);
 
@@ -257,6 +262,17 @@ export function SettingsPage() {
             </div>
             <h2>History</h2>
             <div className="s-card"><Row t="Save browsing history" d="Keep a list of the pages you open, shown on silicon://history. It stays in this browser. Turning this off doesn't delete what's already saved."><Switch label="Save browsing history" on={s.saveHistory} set={(v) => save({ saveHistory: v })} /></Row></div>
+            <h2>Browser identity</h2>
+            <div className="s-card">
+              <Row t="User agent" d={<>The browser and device that sites think you are using. Default sends your own browser's. It applies to pages you open after changing it, so reload any open tabs. It changes the user agent and what pages read from <b>navigator</b>, not things like your screen size or fonts.</>}>
+                <select aria-label="User agent" value={s.userAgent} onChange={(e) => save({ userAgent: e.target.value })}>
+                  <option value="default">Default (your browser's own)</option>
+                  {agents && [...new Set(agents.USER_AGENTS.map((u) => u.group))].map((g) => <optgroup key={g} label={g}>{agents.USER_AGENTS.filter((u) => u.group === g).map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</optgroup>)}
+                  <option value="custom">Custom…</option>
+                </select>
+              </Row>
+              {s.userAgent === "custom" && <Row t="Custom user agent" d="The exact user agent string to send. Plain text only."><Text aria-label="Custom user agent" value={s.customUserAgent} commit={(v) => { if (v && agents && !agents.validUserAgent(v)) toast("Use plain text, up to 300 characters"); else save({ customUserAgent: v }); }} placeholder="Mozilla/5.0 (…)" /></Row>}
+            </div>
             <h2>Leaving</h2>
             <div className="s-card"><Row t="Confirm before leaving" d="Ask before this tab is closed or reloaded. The panic key ignores this. Off by default."><Switch label="Confirm before leaving" on={s.confirmLeave} set={(v) => save({ confirmLeave: v })} /></Row></div>
           </> })}

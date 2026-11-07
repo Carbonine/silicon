@@ -1,7 +1,10 @@
 // Browser-side proxy adapter. The UI only uses: init(settings), setTransport(settings), createFrame(iframe, onUrl).
 // To use another engine, reimplement this file (and sw.js / server/proxy.js).
 
+import { identityFor, applyToHeaders, applyToWindow } from "./useragents.js";
+
 let controller, cfg, swReg;
+let identity = null; // the browser identity to present (see useragents.js), or null for the browser's own
 
 const load = (src) => new Promise((resolve, reject) => {
   const s = document.createElement("script");
@@ -38,7 +41,11 @@ async function registerWorker() {
   if (!sw.controller) throw new Error("The proxy service worker isn't controlling this page. Reload Silicon and try again.");
 }
 
+// Changing it takes effect for new requests at once; a page that is already open keeps what it read until it reloads.
+export function setUserAgent(settings) { identity = identityFor(settings); }
+
 export async function init(settings) {
+  setUserAgent(settings);
   cfg = await (await fetch("/proxy-config.json")).json();
   await registerWorker();
   // Order matters: Scramjet, then the controller, then the plugins.
@@ -82,6 +89,14 @@ export function createFrame(iframe, onUrl, onWindow, { fixHtml = false, onOpen }
     // Links that would open outside the frame (target=_blank, window.open) go to a new Silicon tab instead.
     new u.CatchEscapedLinksPlugin((url) => new URL("/?url=" + encodeURIComponent(url.href), location.origin)),
   ];
+  class UserAgentPlugin extends u.ManagedPlugin {
+    constructor() { super("silicon-user-agent", []); }
+    install(frame) {
+      this.tap(frame.hooks.fetch.request, (ctx, props) => { if (identity && Array.isArray(props.init?.headers)) props.init.headers = applyToHeaders(props.init.headers, identity); });
+      this.tap(frame.hooks.init.pre, (ctx) => { if (identity) applyToWindow(ctx.window, identity); }); // before the page's own scripts run
+    }
+  }
+  plugins.push(new UserAgentPlugin());
   if (onWindow) {
     // Runs inside every proxied window (including sub-frames) before the page's own scripts do,
     // so shell-level shortcuts like the panic key can't be swallowed by the page.
